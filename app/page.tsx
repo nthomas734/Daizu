@@ -191,7 +191,8 @@ export default function MenuPage() {
                 textAlign: 'left',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                justifyContent: 'space-between',
+                width: '100%',
               }}
             >
               <FlapRow
@@ -203,7 +204,9 @@ export default function MenuPage() {
                 refreshKey={refreshKey}
               />
               {d.glass && (
-                <GlassIcon type={d.glass} size={26} color={palette.brass} stroke={1.8} />
+                <div style={{ flexShrink: 0, width: '24px', display: 'flex', justifyContent: 'center' }}>
+                  <GlassIcon type={d.glass} size={22} color={palette.brass} stroke={1.8} />
+                </div>
               )}
             </button>
           );
