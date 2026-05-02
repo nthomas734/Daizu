@@ -18,12 +18,12 @@ export default function ConfirmPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const isCocktail = order?.category === 'bar';
-  const palette = isCocktail ? COLORS.bar : COLORS.cafe;
 
   const [order, setOrder] = useState<Order | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(5);
 
+  const isCocktail = order?.category === 'bar';
+  const palette = isCocktail ? COLORS.bar : COLORS.cafe;
   // Poll for status updates every 3 seconds
   useEffect(() => {
     let stop = false;
