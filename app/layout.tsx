@@ -27,9 +27,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400&family=Geist+Mono:wght@400;600;700&family=Manrope:wght@300;400;500;600&family=Noto+Serif+JP:wght@300;400&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Fraunces:..."
         />
         <link rel="apple-touch-icon" href="/icon-180.png" />
       </head>
