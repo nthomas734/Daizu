@@ -16,7 +16,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#0A0A0A',
+  themeColor: '#1B3A2F',
 };
 
 export default function RootLayout({
@@ -37,7 +37,7 @@ export default function RootLayout({
         style={{
           margin: 0,
           padding: 0,
-          background: '#1B3A2F',
+          background: '#0A0A0A',
           fontFamily: "'Manrope', system-ui, sans-serif",
           WebkitFontSmoothing: 'antialiased',
           MozOsxFontSmoothing: 'grayscale',

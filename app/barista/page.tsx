@@ -75,6 +75,12 @@ export default function BaristaHubPage() {
         minHeight: '100vh',
         background: palette.cream,
         color: palette.bg,
+        width: '100%',
+      }}
+    >
+    <div
+      style={{
+        minHeight: '100vh',
         fontFamily: "'Manrope', sans-serif",
         maxWidth: '480px',
         margin: '0 auto',
@@ -177,6 +183,7 @@ export default function BaristaHubPage() {
       {tab === 'settings' && (
         <SettingsBody outOfStock={outOfStock} onToggle={toggleStock} palette={palette} />
       )}
+    </div>
     </div>
   );
 }

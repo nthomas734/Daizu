@@ -9,19 +9,30 @@ type Palette = {
   tileText: string;
 };
 
+export type TileSize = 'sm' | 'md' | 'lg';
+
+const TILE_DIMS: Record<TileSize, { w: number; h: number; fs: number; jpFs: number; gap: number }> = {
+  sm: { w: 21, h: 30, fs: 19, jpFs: 15, gap: 2 }, // phone (current)
+  md: { w: 28, h: 40, fs: 24, jpFs: 19, gap: 3 }, // tablet idle (centered big board)
+  lg: { w: 24, h: 34, fs: 21, jpFs: 17, gap: 2 }, // tablet selected (board compressed in 2-col)
+};
+
 export function FlapTile({
   char,
   delay = 0,
   palette,
   jp = false,
+  tileSize = 'sm',
 }: {
   char: string;
   delay?: number;
   palette: Palette;
   jp?: boolean;
+  tileSize?: TileSize;
 }) {
   const [display, setDisplay] = useState(' ');
   const target = jp ? char || ' ' : (char || ' ').toUpperCase();
+  const dims = TILE_DIMS[tileSize];
 
   useEffect(() => {
     const timeouts: ReturnType<typeof setTimeout>[] = [];
@@ -46,15 +57,15 @@ export function FlapTile({
     <div
       style={{
         position: 'relative',
-        width: '21px',
-        height: '30px',
+        width: `${dims.w}px`,
+        height: `${dims.h}px`,
         background: palette.surface,
         color: palette.tileText,
         fontFamily: jp
           ? "'Noto Serif JP', serif"
           : "'Geist Mono', 'JetBrains Mono', ui-monospace, monospace",
         fontWeight: 700,
-        fontSize: jp ? '15px' : '19px',
+        fontSize: jp ? `${dims.jpFs}px` : `${dims.fs}px`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -86,6 +97,7 @@ export function FlapRow({
   palette,
   jp = false,
   refreshKey = 0,
+  tileSize = 'sm',
 }: {
   text: string;
   width?: number;
@@ -93,11 +105,13 @@ export function FlapRow({
   palette: Palette;
   jp?: boolean;
   refreshKey?: number;
+  tileSize?: TileSize;
 }) {
   const padded = (text || '').padEnd(width, ' ').slice(0, width);
   const chars = jp ? Array.from(padded) : padded.split('');
+  const gap = TILE_DIMS[tileSize].gap;
   return (
-    <div style={{ display: 'flex', gap: '2px' }}>
+    <div style={{ display: 'flex', gap: `${gap}px` }}>
       {chars.map((c, i) => (
         <FlapTile
           key={`${refreshKey}-${i}-${c}`}
@@ -105,6 +119,7 @@ export function FlapRow({
           delay={startDelay + i * 35}
           palette={palette}
           jp={jp}
+          tileSize={tileSize}
         />
       ))}
     </div>

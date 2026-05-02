@@ -150,12 +150,17 @@ export default function CustomizePage({
         minHeight: '100vh',
         background: palette.bg,
         color: palette.cream,
-        padding: '20px 20px 140px',
         fontFamily: "'Manrope', system-ui, sans-serif",
-        maxWidth: '480px',
-        margin: '0 auto',
+        width: '100%',
       }}
     >
+      <div
+        style={{
+          padding: '20px 20px 140px',
+          maxWidth: '480px',
+          margin: '0 auto',
+        }}
+      >
       <button onClick={() => router.back()} style={backBtn(palette)}>
         ← back
       </button>
@@ -539,6 +544,7 @@ export default function CustomizePage({
       >
         {submitting ? 'sending…' : 'send order →'}
       </button>
+      </div>
     </div>
   );
 }

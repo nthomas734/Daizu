@@ -120,6 +120,12 @@ export default function BaristaOrderPage({
         minHeight: '100vh',
         background: palette.cream,
         color: palette.bg,
+        width: '100%',
+      }}
+    >
+    <div
+      style={{
+        minHeight: '100vh',
         paddingBottom: '40px',
         fontFamily: "'Manrope', sans-serif",
         maxWidth: '480px',
@@ -516,6 +522,7 @@ export default function BaristaOrderPage({
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }
