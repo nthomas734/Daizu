@@ -4,7 +4,7 @@
   "description": "Bean's home cafe",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#1B3A2F",
   "theme_color": "#1B3A2F",
   "icons": [
