@@ -36,6 +36,19 @@ export default function MenuPage() {
       })
       .catch(() => {});
   }, []);
+  
+  // Update the iOS status bar / theme color to match the current mode.
+  // The static <meta> tag is set in layout.tsx; this overrides it at runtime.
+  useEffect(() => {
+    const color = mode === 'cafe' ? '#1B3A2F' : '#1A2A3F';
+    let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      document.head.appendChild(meta);
+    }
+    meta.content = color;
+  }, [mode]);
 
   const formatRow = (name: string, price: string) => {
     const space = BOARD_WIDTH - name.length - price.length;
