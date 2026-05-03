@@ -129,7 +129,7 @@ export default function MenuPage() {
       style={{
         background: palette.board,
         borderRadius: '6px',
-        padding: isTablet ? '24px 20px' : '18px 28px',
+        padding: isTablet ? '24px 20px' : '18px 12px',
         border: `1px solid ${palette.brass}33`,
         boxShadow: 'inset 0 0 30px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4)',
         display: 'flex',
@@ -191,7 +191,7 @@ export default function MenuPage() {
               tileSize={tileSize}
             />
             {d.glass && (
-              <div style={{ flexShrink: 0, width: '24px', display: 'flex', justifyContent: 'center', marginLeft: '16px' }}>
+             <div style={{ flexShrink: 0, width: '24px', display: 'flex', justifyContent: 'center', marginLeft: '8px' }}>
                 <GlassIcon
                   type={d.glass}
                   size={22}
