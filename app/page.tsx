@@ -160,6 +160,8 @@ export default function MenuPage() {
       {items.map((d, i) => {
         const text = lang === 'jp' ? d.jpRowText : d.rowText;
         const isSelected = isTablet && selectedDrink === d.name;
+        const tileW = tileSize === 'md' ? 28 : tileSize === 'lg' ? 24 : 21;
+        const tileGap = tileSize === 'md' ? 3 : 2;
         return (
           <button
             key={d.name}
@@ -174,8 +176,9 @@ export default function MenuPage() {
               textAlign: 'left',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              justifyContent: 'flex-start',
               width: '100%',
+              position: 'relative',
               transition: 'background 200ms ease, border-left 200ms ease',
             }}
           >
@@ -189,16 +192,31 @@ export default function MenuPage() {
               tileSize={tileSize}
             />
             {d.glass && (
-              <div style={{ flexShrink: 0, width: '28px', display: 'flex', justifyContent: 'center' }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  right: `${tileGap}px`,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: `${tileW}px`,
+                  height: `${tileW}px`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  pointerEvents: 'none',
+                }}
+              >
                 <GlassIcon
                   type={d.glass}
-                  size={tileSize === 'md' ? 28 : 22}
+                  size={Math.round(tileW * 0.78)}
                   color={palette.brass}
                   stroke={1.8}
                 />
               </div>
             )}
           </button>
+        );
+      })}
         );
       })}
 
