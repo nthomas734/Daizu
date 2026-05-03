@@ -176,9 +176,8 @@ export default function MenuPage() {
               textAlign: 'left',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'flex-start',
+              justifyContent: 'space-between',
               width: '100%',
-              position: 'relative',
               transition: 'background 200ms ease, border-left 200ms ease',
             }}
           >
@@ -191,32 +190,16 @@ export default function MenuPage() {
               refreshKey={refreshKey}
               tileSize={tileSize}
             />
-            {d.glass && (() => {
-              const tileH = tileSize === 'md' ? 40 : tileSize === 'lg' ? 34 : 30;
-              return (
-                <div
-                  style={{
-                    position: 'absolute',
-                    right: `${tileW / 2 + tileGap}px`,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: `${tileW}px`,
-                    height: `${tileH}px`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    pointerEvents: 'none',
-                  }}
-                >
-                  <GlassIcon
-                    type={d.glass}
-                    size={Math.round(tileW * 0.78)}
-                    color={palette.brass}
-                    stroke={1.8}
-                  />
-                </div>
-              );
-            })()}
+            {d.glass && (
+              <div style={{ flexShrink: 0, width: '24px', display: 'flex', justifyContent: 'center', marginLeft: '8px' }}>
+                <GlassIcon
+                  type={d.glass}
+                  size={22}
+                  color={palette.brass}
+                  stroke={1.8}
+                />
+              </div>
+            )}
           </button>
         );
       })}
