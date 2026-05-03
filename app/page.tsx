@@ -197,7 +197,7 @@ export default function MenuPage() {
                 <div
                   style={{
                     position: 'absolute',
-                    right: `${tileW + tileGap * 2}px`,
+                    right: `${tileW / 2 + tileGap}px`,
                     top: '50%',
                     transform: 'translateY(-50%)',
                     width: `${tileW}px`,
