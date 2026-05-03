@@ -217,8 +217,6 @@ export default function MenuPage() {
           </button>
         );
       })}
-        );
-      })}
 
       <div
         style={{
