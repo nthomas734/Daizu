@@ -2,19 +2,20 @@
 
 import { useEffect, useState } from 'react';
 
-// Phone: ≤768px in BOTH dimensions. Tablet: any dimension >768px.
-// This way a tablet in portrait still gets the tablet layout.
+// Tablet = the SHORT side is wider than a phone.
+// A phone is always narrow on at least one axis (typically <500px wide in portrait,
+// <500px tall in landscape). A tablet is wider than that on BOTH axes.
 export type Viewport = 'phone' | 'tablet';
 
-const BREAKPOINT = 768;
+const SHORT_SIDE_BREAKPOINT = 600;
 
 export function useViewport(): Viewport {
   const [viewport, setViewport] = useState<Viewport>('phone');
 
   useEffect(() => {
     const update = () => {
-      const longSide = Math.max(window.innerWidth, window.innerHeight);
-      setViewport(longSide > BREAKPOINT ? 'tablet' : 'phone');
+      const shortSide = Math.min(window.innerWidth, window.innerHeight);
+      setViewport(shortSide > SHORT_SIDE_BREAKPOINT ? 'tablet' : 'phone');
     };
     update();
     window.addEventListener('resize', update);
