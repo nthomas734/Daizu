@@ -103,7 +103,7 @@ export default function MenuPage() {
 
   const headerText = (() => {
     if (mode === 'cafe') return lang === 'en' ? '     MENU     ' : '    メニュー   ';
-    return lang === 'en' ? '     BAR      ' : '     バー     ';
+    return lang === 'en' ? ' COCKTAIL MENU ' : '    カクテル    ';
   })();
 
   // Determine tile size based on viewport + selection state
