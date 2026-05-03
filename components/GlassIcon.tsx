@@ -14,7 +14,7 @@ type Props = {
 export function GlassIcon({ type, size = 22, color, stroke = 2 }: Props) {
   return (
     <svg
-      viewBox="0 -3 80 90"
+      viewBox="0 0 80 90"
       width={size}
       height={size}
       fill="none"
