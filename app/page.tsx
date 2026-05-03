@@ -190,16 +190,7 @@ export default function MenuPage() {
               refreshKey={refreshKey}
               tileSize={tileSize}
             />
-            {d.glass && (
-             <div style={{ flexShrink: 0, width: '24px', display: 'flex', justifyContent: 'center', marginLeft: '8px' }}>
-                <GlassIcon
-                  type={d.glass}
-                  size={22}
-                  color={palette.brass}
-                  stroke={1.8}
-                />
-              </div>
-            )}
+            
           </button>
         );
       })}
