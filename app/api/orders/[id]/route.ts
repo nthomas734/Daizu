@@ -8,7 +8,7 @@ export async function GET(
   const { id } = await params;
   const sb = supabaseAdmin();
   const { data, error } = await sb
-    .from('orders')
+    .from('daizu_orders')
     .select('*')
     .eq('id', id)
     .single();
@@ -24,7 +24,7 @@ export async function DELETE(
 ) {
   const { id } = await params;
   const sb = supabaseAdmin();
-  const { error } = await sb.from('orders').delete().eq('id', id);
+  const { error } = await sb.from('daizu_orders').delete().eq('id', id);
   if (error) {
     return NextResponse.json({ error: 'delete_failed' }, { status: 500 });
   }

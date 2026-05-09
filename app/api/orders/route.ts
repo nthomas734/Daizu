@@ -9,7 +9,7 @@ export async function GET() {
   const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
   const { data, error } = await sb
-    .from('orders')
+    .from('daizu_orders')
     .select('*')
     .gte('created_at', dayAgo)
     .order('created_at', { ascending: false });
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   };
 
   const { data, error } = await sb
-    .from('orders')
+    .from('daizu_orders')
     .insert(payload)
     .select()
     .single();
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     const favLabel = isCocktail
       ? `${body.drink.toLowerCase()}${body.strength && body.strength !== 'standard' ? ` (${body.strength})` : ''}`
       : `${body.drink.toLowerCase()} (${body.temp})`;
-    await sb.from('favorites').insert({
+    await sb.from('daizu_favorites').insert({
       label: favLabel,
       category: body.category || 'cafe',
       drink: body.drink,
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
 export async function DELETE() {
   const sb = supabaseAdmin();
   const { error } = await sb
-    .from('orders')
+    .from('daizu_orders')
     .delete()
     .in('status', ['received', 'brewing', 'cancelled']);
   if (error) {

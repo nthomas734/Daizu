@@ -17,7 +17,7 @@ export async function PATCH(
 
   const sb = supabaseAdmin();
   const { data, error } = await sb
-    .from('orders')
+    .from('daizu_orders')
     .update({ status: body.status })
     .eq('id', id)
     .select()

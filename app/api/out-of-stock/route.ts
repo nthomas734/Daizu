@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET() {
   const sb = supabaseAdmin();
-  const { data, error } = await sb.from('out_of_stock').select('*');
+  const { data, error } = await sb.from('daizu_out_of_stock').select('*');
   if (error) return NextResponse.json({ error: 'database_error' }, { status: 500 });
   // Reshape into { drinks: [...], milks: [...], syrups: [...] }
   const out = { drinks: [] as string[], milks: [] as string[], syrups: [] as string[] };
@@ -25,17 +25,17 @@ export async function POST(req: NextRequest) {
 
   // Try to delete first; if nothing was deleted, insert (toggle behavior)
   const { data: existing } = await sb
-    .from('out_of_stock')
+    .from('daizu_out_of_stock')
     .select('id')
     .eq('category', category)
     .eq('item_id', itemId)
     .maybeSingle();
 
   if (existing) {
-    await sb.from('out_of_stock').delete().eq('id', existing.id);
+    await sb.from('daizu_out_of_stock').delete().eq('id', existing.id);
     return NextResponse.json({ active: false });
   } else {
-    await sb.from('out_of_stock').insert({ category, item_id: itemId });
+    await sb.from('daizu_out_of_stock').insert({ category, item_id: itemId });
     return NextResponse.json({ active: true });
   }
 }

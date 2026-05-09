@@ -11,7 +11,7 @@ export async function POST(
   const sb = supabaseAdmin();
 
   const { data, error } = await sb
-    .from('orders')
+    .from('daizu_orders')
     .update({
       status: 'ready',
       ready_at: new Date().toISOString(),
