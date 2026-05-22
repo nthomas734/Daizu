@@ -651,7 +651,7 @@ function BaristaDot({
     pressTimer.current = setTimeout(() => {
       onOpen();
       setPressing(false);
-    }, 600); // long-press = 600ms
+    }, 350); // long-press = 350ms
   };
 
   const cancelPress = () => {
@@ -684,6 +684,9 @@ function BaristaDot({
         zIndex: 50,
         WebkitTapHighlightColor: 'transparent',
         touchAction: 'manipulation',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
+        WebkitTouchCallout: 'none',
       }}
     >
       <svg
