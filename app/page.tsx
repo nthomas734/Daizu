@@ -634,7 +634,7 @@ function PreviewPane({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BaristaDot — triple-tap escape hatch into /barista
+// BaristaDot — long-press the brass shaker to enter /barista
 // ─────────────────────────────────────────────────────────────────────────────
 function BaristaDot({
   onOpen,
@@ -643,42 +643,69 @@ function BaristaDot({
   onOpen: () => void;
   palette: { brass: string };
 }) {
-  const [taps, setTaps] = useState(0);
-  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pressing, setPressing] = useState(false);
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleTap = () => {
-    setTaps((t) => {
-      const next = t + 1;
-      if (next >= 3) {
-        if (tapTimer.current) clearTimeout(tapTimer.current);
-        onOpen();
-        return 0;
-      }
-      if (tapTimer.current) clearTimeout(tapTimer.current);
-      tapTimer.current = setTimeout(() => setTaps(0), 800);
-      return next;
-    });
+  const startPress = () => {
+    setPressing(true);
+    pressTimer.current = setTimeout(() => {
+      onOpen();
+      setPressing(false);
+    }, 600); // long-press = 600ms
+  };
+
+  const cancelPress = () => {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+    pressTimer.current = null;
+    setPressing(false);
   };
 
   return (
     <button
-      onClick={handleTap}
-      aria-label="barista access"
+      onPointerDown={startPress}
+      onPointerUp={cancelPress}
+      onPointerLeave={cancelPress}
+      onPointerCancel={cancelPress}
+      aria-label="barista access (long press)"
       style={{
         position: 'fixed',
-        bottom: '20px',
-        right: '20px',
-        width: '12px',
-        height: '12px',
+        bottom: '14px',
+        right: '14px',
+        width: '44px',
+        height: '44px',
         borderRadius: '50%',
-        background: palette.brass,
-        opacity: taps > 0 ? 0.5 : 0.18,
+        background: 'transparent',
         border: 'none',
         padding: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         cursor: 'pointer',
-        transition: 'opacity 150ms ease',
         zIndex: 50,
+        WebkitTapHighlightColor: 'transparent',
+        touchAction: 'manipulation',
       }}
-    />
+    >
+      <svg
+        viewBox="0 0 24 24"
+        width="20"
+        height="20"
+        fill="none"
+        stroke={palette.brass}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{
+          opacity: pressing ? 0.9 : 0.35,
+          transform: pressing ? 'scale(1.15)' : 'scale(1)',
+          transition: 'opacity 200ms ease, transform 200ms ease',
+        }}
+        aria-hidden="true"
+      >
+        <path d="M9 3 L15 3 L15 6 L9 6 Z" />
+        <path d="M8 6 L16 6 L15 21 L9 21 Z" />
+        <path d="M10 11 L14 11" />
+      </svg>
+    </button>
   );
 }
