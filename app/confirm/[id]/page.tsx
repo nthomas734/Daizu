@@ -18,6 +18,10 @@ export default function ConfirmPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const fromBar = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('from') === 'bar'
+    : false;
+  const backUrl = fromBar ? '/?mode=bar' : '/';
 
   const [order, setOrder] = useState<Order | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(5);
@@ -54,7 +58,7 @@ export default function ConfirmPage({
 
   const cancel = async () => {
     await fetch(`/api/orders/${id}`, { method: 'DELETE' });
-    router.push('/');
+    router.push(backUrl);
   };
 
   if (!order) {
@@ -270,7 +274,7 @@ export default function ConfirmPage({
 
       {isReady && (
         <button
-          onClick={() => router.push('/')}
+          onClick={() => router.push(backUrl)}
           style={{
             background: palette.cream,
             color: palette.bg,

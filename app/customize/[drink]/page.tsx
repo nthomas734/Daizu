@@ -25,6 +25,10 @@ export default function CustomizePage({
 }) {
   const { drink: drinkParam } = use(params);
   const router = useRouter();
+  const fromBar = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('from') === 'bar'
+    : false;
+  const backUrl = fromBar ? '/?mode=bar' : '/';
   const drinkName = decodeURIComponent(drinkParam).toUpperCase();
 
   // Detect category — try cocktails first, then coffee
@@ -128,7 +132,7 @@ export default function CustomizePage({
     });
     const data = await res.json();
     if (data.order) {
-      router.push(`/confirm/${data.order.id}`);
+      router.push(`/confirm/${data.order.id}${fromBar ? '?from=bar' : ''}`);
     } else {
       setSubmitting(false);
       alert('Something went wrong placing the order');
@@ -139,7 +143,7 @@ export default function CustomizePage({
     return (
       <div style={{ padding: '40px', color: palette.cream, background: palette.bg, minHeight: '100vh' }}>
         <p>Drink not found.</p>
-        <button onClick={() => router.push('/')}>← back</button>
+        <button onClick={() => router.push(backUrl)}>← back</button>
       </div>
     );
   }
@@ -161,7 +165,7 @@ export default function CustomizePage({
           margin: '0 auto',
         }}
       >
-      <button onClick={() => router.back()} style={backBtn(palette)}>
+      <button onClick={() => router.push(backUrl)} style={backBtn(palette)}>
         ← back
       </button>
 

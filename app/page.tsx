@@ -21,6 +21,14 @@ export default function MenuPage() {
   const isTablet = viewport === 'tablet';
 
   const [mode, setMode] = useState<'cafe' | 'bar'>('cafe');
+
+  // On mount, read ?mode=bar from the URL to initialize bar mode
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mode') === 'bar') {
+      setMode('bar');
+    }
+  }, []);
   const [lang, setLang] = useState<'jp' | 'en'>('jp');
   const [outOfStock, setOutOfStock] = useState<{ drinks: string[] }>({ drinks: [] });
   const [refreshKey, setRefreshKey] = useState(0);
@@ -111,15 +119,16 @@ export default function MenuPage() {
 
   // Click handler: phone navigates immediately; tablet sets selection
   const handleDrinkTap = (drinkName: string) => {
+    const customizeUrl = `/customize/${encodeURIComponent(drinkName)}${mode === 'bar' ? '?from=bar' : ''}`;
     if (isTablet) {
       // If tapping the same drink that's already selected, navigate to customize
       if (selectedDrink === drinkName) {
-        router.push(`/customize/${encodeURIComponent(drinkName)}`);
+        router.push(customizeUrl);
       } else {
         setSelectedDrink(drinkName);
       }
     } else {
-      router.push(`/customize/${encodeURIComponent(drinkName)}`);
+      router.push(customizeUrl);
     }
   };
 
@@ -364,7 +373,7 @@ export default function MenuPage() {
             mode={mode}
             palette={palette}
             onCustomize={() =>
-              router.push(`/customize/${encodeURIComponent(selectedDrink)}`)
+              router.push(`/customize/${encodeURIComponent(selectedDrink)}${mode === 'bar' ? '?from=bar' : ''}`)
             }
             onDismiss={() => setSelectedDrink(null)}
           />
