@@ -56,6 +56,10 @@ export default function BaristaOrderPage({
     );
   }
 
+  // How many of this drink — drives the recipe-scaling hints below.
+  // Defaults to 1 (no scaling) for anything without an explicit quantity.
+  const quantity = order.quantity && order.quantity > 1 ? order.quantity : 1;
+
   // Build ingredients + steps depending on category
   let fullIngredients: string[];
   let steps: string[];
@@ -313,9 +317,29 @@ export default function BaristaOrderPage({
           )}
         </div>
 
+        {quantity > 1 && (
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '10px 14px',
+              background: palette.accent,
+              color: palette.cream,
+              borderRadius: '2px',
+              fontFamily: "'Geist Mono', monospace",
+              fontSize: '12px',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}
+          >
+            making {quantity} — scale each line ×{quantity}
+          </div>
+        )}
+
         <Section title="ingredients" palette={palette}>
           <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-            {fullIngredients.map((ing, i) => (
+            {fullIngredients.map((ing, i) => {
+              const hint = quantity > 1 ? scaleHint(ing, quantity) : null;
+              return (
               <li
                 key={i}
                 style={{
@@ -338,9 +362,22 @@ export default function BaristaOrderPage({
                 >
                   {String(i + 1).padStart(2, '0')}
                 </span>
-                {ing}
+                <span>{ing}</span>
+                {hint && (
+                  <span
+                    style={{
+                      color: palette.accent,
+                      fontFamily: "'Geist Mono', monospace",
+                      fontSize: '12px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    → {hint}
+                  </span>
+                )}
               </li>
-            ))}
+              );
+            })}
           </ul>
         </Section>
 
@@ -525,6 +562,56 @@ export default function BaristaOrderPage({
     </div>
     </div>
   );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Recipe scaling — conservative, display-only.
+// Given an ingredient line like "2 oz bourbon" and a multiplier, returns a short
+// scaled hint ("4 oz") ONLY when the line starts with a number + a known unit.
+// Anything ambiguous ("1 large cube", "3 coffee beans", "float Baileys") returns
+// null and shows no hint — the barista uses judgement, cued by the ×N banner.
+// ─────────────────────────────────────────────────────────────────────────────
+const FRACTIONS: Record<string, number> = {
+  '¼': 0.25,
+  '½': 0.5,
+  '¾': 0.75,
+  '⅓': 1 / 3,
+  '⅔': 2 / 3,
+  '⅛': 0.125,
+};
+
+const VOLUME_UNITS = ['oz', 'ml', 'cl', 'l', 'tsp', 'tbsp', 'teaspoon', 'tablespoon', 'cup', 'cups'];
+const COUNT_UNITS = ['dash', 'dashes', 'drop', 'drops'];
+
+function formatQty(v: number): string {
+  const whole = Math.floor(v + 1e-9);
+  const frac = v - whole;
+  let fracStr = '';
+  if (Math.abs(frac - 0.25) < 0.02) fracStr = '¼';
+  else if (Math.abs(frac - 0.5) < 0.02) fracStr = '½';
+  else if (Math.abs(frac - 0.75) < 0.02) fracStr = '¾';
+  else if (Math.abs(frac - 1 / 3) < 0.03) fracStr = '⅓';
+  else if (Math.abs(frac - 2 / 3) < 0.03) fracStr = '⅔';
+  else if (frac > 0.02) return String(Math.round(v * 100) / 100); // odd value → plain decimal
+  if (whole === 0 && fracStr) return fracStr;
+  if (fracStr) return `${whole}${fracStr}`;
+  return String(whole);
+}
+
+function scaleHint(line: string, mult: number): string | null {
+  const s = line.trimStart();
+  // Leading: optional decimal/integer, optional unicode fraction, optional unit word
+  const m = s.match(/^(\d+(?:\.\d+)?)?\s*([¼½¾⅓⅔⅛])?\s*([a-zA-Z]+)?/);
+  if (!m) return null;
+  const whole = m[1] ? parseFloat(m[1]) : 0;
+  const frac = m[2] ? FRACTIONS[m[2]] || 0 : 0;
+  const value = whole + frac;
+  if (value <= 0) return null; // no parseable number → no hint
+  const unit = (m[3] || '').toLowerCase();
+  const scaled = value * mult;
+  if (VOLUME_UNITS.includes(unit)) return `${formatQty(scaled)} ${unit}`;
+  if (COUNT_UNITS.includes(unit)) return formatQty(scaled); // number only — line already says the unit
+  return null; // unknown/ambiguous unit ("large", "sugar", "coffee", "") → no hint
 }
 
 function Section({
