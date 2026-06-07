@@ -446,7 +446,7 @@ export default function BaristaOrderPage({
               cursor: 'pointer',
             }}
           >
-            start brewing
+            {isCocktail ? 'start mixing' : 'start brewing'}
           </button>
         )}
         {order.status === 'brewing' && (
