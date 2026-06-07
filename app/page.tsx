@@ -7,7 +7,6 @@ import { FlapRow, TileSize } from '@/components/SplitFlap';
 import { GlassIcon } from '@/components/GlassIcon';
 import {
   ALL_BOTTLES,
-  BABY_GUINNESS,
   COCKTAILS,
   COCKTAIL_RECIPES,
   COLORS,
@@ -23,10 +22,10 @@ export default function MenuPage() {
   const viewport = useViewport();
   const isTablet = viewport === 'tablet';
 
-  const [mode, setMode]     = useState<'cafe' | 'bar'>('cafe');
+  const [mode, setMode]       = useState<'cafe' | 'bar'>('cafe');
   const [isKiosk, setIsKiosk] = useState(false);
-  const [barTab, setBarTab] = useState<'cocktails' | 'bottles'>('cocktails');
-  const [lang, setLang]     = useState<'jp' | 'en'>('jp');
+  const [barTab, setBarTab]   = useState<'cocktails' | 'bottles'>('cocktails');
+  const [lang, setLang]       = useState<'jp' | 'en'>('jp');
   const [outOfStock, setOutOfStock] = useState<{ drinks: string[] }>({ drinks: [] });
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedDrink, setSelectedDrink] = useState<string | null>(null);
@@ -38,22 +37,21 @@ export default function MenuPage() {
   const [sheetSubmitting, setSheetSubmitting] = useState(false);
 
   // Baby Guinness chamber easter egg
-  const [chamberOpen, setChamberOpen]     = useState(false);
-  const [podOpen, setPodOpen]             = useState(false);
-  const [coreGlow, setCoreGlow]           = useState(false);
-  const [pourActive, setPourActive]       = useState(false);
-  const [msgVisible, setMsgVisible]       = useState(false);
-  const [sendVisible, setSendVisible]     = useState(false);
+  const [chamberOpen, setChamberOpen]   = useState(false);
+  const [podOpen, setPodOpen]           = useState(false);
+  const [coreGlow, setCoreGlow]         = useState(false);
+  const [pourActive, setPourActive]     = useState(false);
+  const [msgVisible, setMsgVisible]     = useState(false);
+  const [sendVisible, setSendVisible]   = useState(false);
 
-
-  // Bean hold gesture state
+  // Bean hold gesture
   const [beanHolding, setBeanHolding] = useState(false);
   const beanTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const palette = mode === 'cafe' ? COLORS.cafe : COLORS.bar;
   const BOARD_WIDTH = 16;
 
-  // On mount — read URL params for initial mode and kiosk flag
+  // Read URL params on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('mode') === 'bar') {
@@ -68,7 +66,7 @@ export default function MenuPage() {
     return () => clearTimeout(t);
   }, []);
 
-  // Re-flip tiles on language, mode, or sub-tab change
+  // Re-flip tiles on language / mode / tab change
   useEffect(() => {
     setRefreshKey(k => k + 1);
   }, [lang, mode, barTab]);
@@ -78,7 +76,7 @@ export default function MenuPage() {
     setSelectedDrink(null);
   }, [mode, barTab]);
 
-  // Theme color meta
+  // Theme color meta tag
   useEffect(() => {
     const color = mode === 'cafe' ? '#1B3A2F' : '#1A2A3F';
     let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
@@ -145,7 +143,7 @@ export default function MenuPage() {
     return lang === 'en' ? '  BOTTLE LIST  ' : '  ビール・酒  ';
   })();
 
-  // ── Drink tap handler ─────────────────────────────────────────────────────
+  // ── Drink tap ─────────────────────────────────────────────────────────────
 
   const handleDrinkTap = (item: MenuItem) => {
     if (mode === 'bar' && barTab === 'bottles') {
@@ -207,8 +205,8 @@ export default function MenuPage() {
   const openChamber = () => {
     setBeanHolding(false);
     setChamberOpen(true);
-    setTimeout(() => setPodOpen(true),   150);
-    setTimeout(() => setCoreGlow(true),  500);
+    setTimeout(() => setPodOpen(true),    150);
+    setTimeout(() => setCoreGlow(true),   500);
     setTimeout(() => setPourActive(true), 900);
     setTimeout(() => setMsgVisible(true), 2100);
     setTimeout(() => setSendVisible(true), 2500);
@@ -216,59 +214,48 @@ export default function MenuPage() {
 
   const closeChamber = () => {
     setChamberOpen(false);
-    setPodOpen(false); setCoreGlow(false); setPourActive(false);
-    setMsgVisible(false); setSendVisible(false);
+    setPodOpen(false);
+    setCoreGlow(false);
+    setPourActive(false);
+    setMsgVisible(false);
+    setSendVisible(false);
   };
 
-  const handleChamberSubmit = () => {}; // reserved — Baby Guinness disabled (no Baileys)
-
-  // Ring animation values — fills over 1.5s when holding
-  const RING_C = 126; // circumference: 2π × 20
+  // Ring fill animation values
+  const RING_C = 126;
   const ringStyle = {
     strokeDashoffset: beanHolding ? 0 : RING_C,
-    transition: beanHolding
-      ? 'stroke-dashoffset 1.5s linear'
-      : 'stroke-dashoffset 0s',
+    transition: beanHolding ? 'stroke-dashoffset 1.5s linear' : 'stroke-dashoffset 0s',
   };
 
-  // ── Board JSX (shared between phone and tablet) ───────────────────────────
+  // ── Board ─────────────────────────────────────────────────────────────────
 
   const tileSize: TileSize = !isTablet ? 'sm' : selectedDrink ? 'lg' : 'md';
 
   const board = (
-    <div
-      style={{
-        background: palette.board,
-        borderRadius: '6px',
-        padding: isTablet ? '24px 20px' : '18px 12px',
-        border: `1px solid ${palette.brass}33`,
-        boxShadow: 'inset 0 0 30px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4)',
-        display: 'flex', flexDirection: 'column',
-        gap: isTablet && !selectedDrink ? '8px' : '6px',
-      }}
-    >
+    <div style={{
+      background: palette.board, borderRadius: '6px',
+      padding: isTablet ? '24px 20px' : '18px 12px',
+      border: `1px solid ${palette.brass}33`,
+      boxShadow: 'inset 0 0 30px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4)',
+      display: 'flex', flexDirection: 'column',
+      gap: isTablet && !selectedDrink ? '8px' : '6px',
+    }}>
       {/* Sub-tab for bar mode */}
       {mode === 'bar' && (
         <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
           {(['cocktails', 'bottles'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setBarTab(tab)}
-              style={{
-                flex: 1,
-                fontFamily: "'Geist Mono', monospace",
-                fontSize: tileSize === 'sm' ? '9px' : '10px',
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                padding: '7px 0',
-                borderRadius: '2px',
-                border: `1px solid ${barTab === tab ? palette.brass : palette.brass + '44'}`,
-                background: barTab === tab ? palette.brass : 'transparent',
-                color: barTab === tab ? palette.board : palette.brass,
-                cursor: 'pointer',
-                transition: 'all 200ms ease',
-              }}
-            >
+            <button key={tab} onClick={() => setBarTab(tab)} style={{
+              flex: 1,
+              fontFamily: "'Geist Mono', monospace",
+              fontSize: tileSize === 'sm' ? '9px' : '10px',
+              letterSpacing: '0.2em', textTransform: 'uppercase',
+              padding: '7px 0', borderRadius: '2px',
+              border: `1px solid ${barTab === tab ? palette.brass : palette.brass + '44'}`,
+              background: barTab === tab ? palette.brass : 'transparent',
+              color: barTab === tab ? palette.board : palette.brass,
+              cursor: 'pointer', transition: 'all 200ms ease',
+            }}>
               {tab}
             </button>
           ))}
@@ -285,23 +272,15 @@ export default function MenuPage() {
         const text = lang === 'jp' ? d.jpRowText : d.rowText;
         const isSelected = isTablet && selectedDrink === d.name;
         return (
-          <button
-            key={d.name}
-            onClick={() => handleDrinkTap(d)}
-            style={{
-              background: isSelected ? `${palette.brass}1A` : 'transparent',
-              border: 'none',
-              borderLeft: isSelected ? `2px solid ${palette.brass}` : '2px solid transparent',
-              padding: isSelected ? '4px 6px' : '4px 8px',
-              borderRadius: '2px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              display: 'flex',
-              alignItems: 'center',
-              width: '100%',
-              transition: 'background 200ms ease, border-left 200ms ease',
-            }}
-          >
+          <button key={d.name} onClick={() => handleDrinkTap(d)} style={{
+            background: isSelected ? `${palette.brass}1A` : 'transparent',
+            border: 'none',
+            borderLeft: isSelected ? `2px solid ${palette.brass}` : '2px solid transparent',
+            padding: isSelected ? '4px 6px' : '4px 8px',
+            borderRadius: '2px', cursor: 'pointer', textAlign: 'left',
+            display: 'flex', alignItems: 'center', width: '100%',
+            transition: 'background 200ms ease, border-left 200ms ease',
+          }}>
             <FlapRow text={text} width={BOARD_WIDTH} startDelay={300 + i * 80} palette={palette} jp={lang === 'jp'} refreshKey={refreshKey} tileSize={tileSize} />
           </button>
         );
@@ -314,7 +293,7 @@ export default function MenuPage() {
     </div>
   );
 
-  // ── Bean logo (the long-press target) ─────────────────────────────────────
+  // ── Bean logo (long-press target) ─────────────────────────────────────────
 
   const beanLogo = (
     <button
@@ -332,37 +311,26 @@ export default function MenuPage() {
       aria-label="daizu logo"
     >
       {/* Progress ring */}
-      <svg
-        viewBox="0 0 44 44"
-        width="48" height="48"
-        style={{ position: 'absolute', top: '-2px', left: '-2px', transform: 'rotate(-90deg)' }}
-      >
-        <circle
-          cx="22" cy="22" r="20"
-          fill="none"
-          stroke={palette.brass}
-          strokeWidth="2"
-          strokeLinecap="round"
+      <svg viewBox="0 0 44 44" width="48" height="48"
+        style={{ position: 'absolute', top: '-2px', left: '-2px', transform: 'rotate(-90deg)' }}>
+        <circle cx="22" cy="22" r="20" fill="none"
+          stroke={palette.brass} strokeWidth="2" strokeLinecap="round"
           strokeDasharray={RING_C}
-          style={ringStyle as React.CSSProperties}
-          opacity={beanHolding ? 0.9 : 0}
+          style={{ ...ringStyle, opacity: beanHolding ? 0.9 : 0 } as React.CSSProperties}
         />
       </svg>
+      {/* Logo wrapped in div for filter/transform animation */}
       <div style={{
-  filter: beanHolding ? `drop-shadow(0 0 6px ${palette.brass}99)` : 'none',
-  transform: beanHolding ? 'scale(1.06)' : 'scale(1)',
-  transition: 'filter 0.3s ease, transform 0.2s ease',
-}}>
-  <Logo
-    size={isTablet ? 40 : 36}
-    color={palette.brass}
-    stroke={6}
-  />
-</div>
+        filter: beanHolding ? `drop-shadow(0 0 6px ${palette.brass}99)` : 'none',
+        transform: beanHolding ? 'scale(1.06)' : 'scale(1)',
+        transition: 'filter 0.3s ease, transform 0.2s ease',
+      }}>
+        <Logo size={isTablet ? 40 : 36} color={palette.brass} stroke={6} />
+      </div>
     </button>
   );
 
-  // ── Header (shared) ───────────────────────────────────────────────────────
+  // ── Header ────────────────────────────────────────────────────────────────
 
   const header = (
     <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', paddingBottom: '4px', width: '100%' }}>
@@ -377,18 +345,14 @@ export default function MenuPage() {
           </span>
         </div>
       </div>
-      {/* Mode toggle — hidden in kiosk mode */}
       {!isKiosk && (
-        <button
-          onClick={() => setMode(mode === 'cafe' ? 'bar' : 'cafe')}
-          style={{
-            background: 'transparent', border: `1px solid ${palette.brass}`,
-            color: palette.brass, fontFamily: "'Geist Mono', monospace",
-            fontSize: isTablet ? '12px' : '10px', letterSpacing: '0.15em',
-            padding: isTablet ? '7px 12px' : '5px 9px', borderRadius: '2px',
-            textTransform: 'uppercase', cursor: 'pointer',
-          }}
-        >
+        <button onClick={() => setMode(mode === 'cafe' ? 'bar' : 'cafe')} style={{
+          background: 'transparent', border: `1px solid ${palette.brass}`,
+          color: palette.brass, fontFamily: "'Geist Mono', monospace",
+          fontSize: isTablet ? '12px' : '10px', letterSpacing: '0.15em',
+          padding: isTablet ? '7px 12px' : '5px 9px', borderRadius: '2px',
+          textTransform: 'uppercase', cursor: 'pointer',
+        }}>
           {mode === 'cafe' ? '→ bar' : '→ cafe'}
         </button>
       )}
@@ -398,25 +362,19 @@ export default function MenuPage() {
   // ── Bottle quick-order sheet ──────────────────────────────────────────────
 
   const sheet = sheetItem && (
-    <div
-      onClick={e => { if (e.target === e.currentTarget) setSheetItem(null); }}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 50,
-        background: 'rgba(0,0,0,0.5)',
-        display: 'flex', alignItems: 'flex-end',
-        transition: 'background 0.2s',
-      }}
-    >
-      <div
-        style={{
-          width: '100%', maxWidth: '480px', margin: '0 auto',
-          background: '#16263b',
-          borderTop: `1px solid ${palette.brass}33`,
-          borderRadius: '18px 18px 0 0',
-          padding: '22px 20px 32px',
-          animation: 'slideUp 280ms cubic-bezier(0.4,0,0.2,1)',
-        }}
-      >
+    <div onClick={e => { if (e.target === e.currentTarget) setSheetItem(null); }} style={{
+      position: 'fixed', inset: 0, zIndex: 50,
+      background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'flex-end',
+    }}>
+      <div style={{
+        width: '100%', maxWidth: '480px', margin: '0 auto',
+        background: '#16263b',
+        borderTop: `1px solid ${palette.brass}33`,
+        borderRadius: '18px 18px 0 0',
+        padding: '22px 20px 32px',
+        animation: 'slideUp 280ms cubic-bezier(0.4,0,0.2,1)',
+      }}>
         <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '30px', color: palette.cream, letterSpacing: '-0.02em', marginBottom: '2px' }}>
           {sheetItem.name.toLowerCase()}
         </div>
@@ -431,18 +389,14 @@ export default function MenuPage() {
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {SPIRITS_MIXERS.map(m => (
-                <button
-                  key={m.id}
-                  onClick={() => setSheetMixer(m.id)}
-                  style={{
-                    background: sheetMixer === m.id ? palette.cream : 'transparent',
-                    color: sheetMixer === m.id ? palette.board : palette.cream,
-                    border: `1px solid ${sheetMixer === m.id ? palette.cream : palette.brass + '55'}`,
-                    padding: '9px 16px', borderRadius: '2px',
-                    fontFamily: "'Manrope', sans-serif", fontSize: '13px',
-                    cursor: 'pointer', transition: 'all 200ms ease',
-                  }}
-                >
+                <button key={m.id} onClick={() => setSheetMixer(m.id)} style={{
+                  background: sheetMixer === m.id ? palette.cream : 'transparent',
+                  color: sheetMixer === m.id ? palette.board : palette.cream,
+                  border: `1px solid ${sheetMixer === m.id ? palette.cream : palette.brass + '55'}`,
+                  padding: '9px 16px', borderRadius: '2px',
+                  fontFamily: "'Manrope', sans-serif", fontSize: '13px',
+                  cursor: 'pointer', transition: 'all 200ms ease',
+                }}>
                   {m.label}
                 </button>
               ))}
@@ -454,10 +408,7 @@ export default function MenuPage() {
           <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.2em', color: palette.brass, textTransform: 'uppercase', margin: '0 0 8px' }}>
             your name
           </p>
-          <input
-            type="text"
-            value={guestName}
-            onChange={e => setGuestName(e.target.value)}
+          <input type="text" value={guestName} onChange={e => setGuestName(e.target.value)}
             placeholder="your name"
             style={{
               width: '100%', background: 'transparent',
@@ -468,60 +419,42 @@ export default function MenuPage() {
           />
         </div>
 
-        <button
-          onClick={handleSheetSubmit}
-          disabled={sheetSubmitting}
-          style={{
-            width: '100%', background: palette.cream, color: palette.board,
-            border: 'none', padding: '16px',
-            fontFamily: "'Geist Mono', monospace", fontSize: '13px',
-            letterSpacing: '0.25em', fontWeight: 600, textTransform: 'uppercase',
-            borderRadius: '2px', cursor: sheetSubmitting ? 'wait' : 'pointer',
-            opacity: sheetSubmitting ? 0.7 : 1,
-          }}
-        >
+        <button onClick={handleSheetSubmit} disabled={sheetSubmitting} style={{
+          width: '100%', background: palette.cream, color: palette.board,
+          border: 'none', padding: '16px',
+          fontFamily: "'Geist Mono', monospace", fontSize: '13px',
+          letterSpacing: '0.25em', fontWeight: 600, textTransform: 'uppercase',
+          borderRadius: '2px', cursor: sheetSubmitting ? 'wait' : 'pointer',
+          opacity: sheetSubmitting ? 0.7 : 1,
+        }}>
           {sheetSubmitting ? 'sending…' : 'send order →'}
         </button>
 
-        <style>{`
-          @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to   { transform: translateY(0); }
-          }
-        `}</style>
+        <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
       </div>
     </div>
   );
 
-  // ── Baby Guinness chamber overlay ─────────────────────────────────────────
+  // ── Chamber overlay ───────────────────────────────────────────────────────
 
   const chamber = chamberOpen && (
-    <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 100,
-        background: podOpen ? 'rgba(8,14,24,0.97)' : 'rgba(8,14,24,0)',
-        transition: 'background 0.5s ease',
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        justifyContent: 'center', gap: '24px',
-        padding: '0 20px',
-      }}
-    >
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 100,
+      background: podOpen ? 'rgba(8,14,24,0.97)' : 'rgba(8,14,24,0)',
+      transition: 'background 0.5s ease',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', gap: '24px', padding: '0 20px',
+    }}>
       {/* × close */}
-      {!chamberSubmitting && (
-        <button
-          onClick={closeChamber}
-          style={{
-            position: 'absolute', top: '20px', right: '20px',
-            color: palette.brass, fontSize: '24px', opacity: 0.6, padding: '8px', lineHeight: 1,
-          }}
-        >
-          ×
-        </button>
-      )}
+      <button onClick={closeChamber} style={{
+        position: 'absolute', top: '20px', right: '20px',
+        color: '#C8A97E', fontSize: '24px', opacity: 0.6, padding: '8px', lineHeight: 1,
+        background: 'transparent', border: 'none', cursor: 'pointer',
+      }}>×</button>
 
-      {/* vault / pour stage */}
+      {/* Vault / pour stage */}
       <div style={{ position: 'relative', width: '200px', height: '230px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {/* outer brass ring */}
+        {/* Outer brass ring */}
         <div style={{
           position: 'absolute', width: '180px', height: '180px', borderRadius: '50%',
           border: '1px solid rgba(200,169,126,0.3)',
@@ -529,7 +462,7 @@ export default function MenuPage() {
           opacity: coreGlow ? 1 : 0,
           transition: 'transform 2.2s 0.15s cubic-bezier(0.3,0,0.2,1), opacity 0.6s 0.15s',
         }} />
-        {/* inner dashed ring */}
+        {/* Inner dashed ring */}
         <div style={{
           position: 'absolute', width: '130px', height: '130px', borderRadius: '50%',
           border: '1px dashed rgba(200,169,126,0.22)',
@@ -537,7 +470,7 @@ export default function MenuPage() {
           opacity: coreGlow ? 1 : 0,
           transition: 'transform 2.0s 0.25s cubic-bezier(0.3,0,0.2,1), opacity 0.6s 0.25s',
         }} />
-        {/* radial glow core */}
+        {/* Radial glow */}
         <div style={{
           position: 'absolute', width: '40px', height: '40px', borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(247,243,234,0.85), rgba(200,169,126,0) 70%)',
@@ -545,16 +478,13 @@ export default function MenuPage() {
           opacity: coreGlow ? 0.45 : 0,
           transition: 'transform 1.0s 0.5s, opacity 0.8s 0.5s',
         }} />
-
-        {/* the shot glass + pour */}
+        {/* Shot glass + pour */}
         <div style={{
           position: 'absolute', width: '64px', height: '120px',
           border: '2px solid rgba(200,169,126,0.55)', borderTop: 'none',
           borderRadius: '5px 5px 12px 12px', overflow: 'hidden',
           background: 'rgba(255,255,255,0.02)',
-          opacity: pourActive ? 1 : 0,
-          transition: 'opacity 0.4s',
-          zIndex: 2,
+          opacity: pourActive ? 1 : 0, transition: 'opacity 0.4s', zIndex: 2,
         }}>
           <div style={{
             position: 'absolute', left: 0, right: 0, bottom: 0,
@@ -572,41 +502,32 @@ export default function MenuPage() {
             transition: 'opacity 0.5s 1.1s, transform 0.6s 1.1s',
           }} />
         </div>
-
-        {/* the pod halves */}
+        {/* Pod halves */}
         <div style={{ position: 'absolute', width: '110px', height: '140px', zIndex: 3, pointerEvents: 'none' }}>
-          {/* left */}
           <div style={{
             position: 'absolute', left: 0, top: 0, width: '55px', height: '140px',
             border: '2.5px solid #C8A97E', borderRight: 'none',
-            borderRadius: '120px 0 0 120px',
-            transformOrigin: 'right center',
+            borderRadius: '120px 0 0 120px', transformOrigin: 'right center',
             transform: podOpen ? 'perspective(500px) rotateY(-130deg)' : 'rotateY(0deg)',
             opacity: podOpen ? 0.12 : 1,
             transition: 'transform 1.1s 0.35s cubic-bezier(0.5,0,0.2,1), opacity 0.6s 1.1s',
           }} />
-          {/* right */}
           <div style={{
             position: 'absolute', right: 0, top: 0, width: '55px', height: '140px',
             border: '2.5px solid #C8A97E', borderLeft: 'none',
-            borderRadius: '0 120px 120px 0',
-            transformOrigin: 'left center',
+            borderRadius: '0 120px 120px 0', transformOrigin: 'left center',
             transform: podOpen ? 'perspective(500px) rotateY(130deg)' : 'rotateY(0deg)',
             opacity: podOpen ? 0.12 : 1,
             transition: 'transform 1.1s 0.35s cubic-bezier(0.5,0,0.2,1), opacity 0.6s 1.1s',
           }} />
-          {/* sprout — fades as pod opens */}
-          <svg
-            style={{ position: 'absolute', top: '-16px', left: '50%', transform: 'translateX(-50%)', opacity: podOpen ? 0 : 1, transition: 'opacity 0.3s' }}
-            width="32" height="24" viewBox="0 0 32 24" fill="none" stroke="#C8A97E" strokeWidth="2" strokeLinecap="round"
-          >
-            <path d="M9 22c-4-6 0-12 7-13" />
-            <path d="M23 22c4-6 0-12-7-13" />
+          <svg style={{ position: 'absolute', top: '-16px', left: '50%', transform: 'translateX(-50%)', opacity: podOpen ? 0 : 1, transition: 'opacity 0.3s' }}
+            width="32" height="24" viewBox="0 0 32 24" fill="none" stroke="#C8A97E" strokeWidth="2" strokeLinecap="round">
+            <path d="M9 22c-4-6 0-12 7-13" /><path d="M23 22c4-6 0-12-7-13" />
           </svg>
         </div>
       </div>
 
-      {/* message */}
+      {/* Message */}
       <div style={{
         textAlign: 'center',
         opacity: msgVisible ? 1 : 0,
@@ -624,26 +545,19 @@ export default function MenuPage() {
         </div>
       </div>
 
-      {/* coming soon note — fades in last (no Baileys tonight) */}
+      {/* Not available tonight */}
       {sendVisible && (
         <div style={{ width: '100%', maxWidth: '280px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <p style={{
-            fontFamily: "'Geist Mono', monospace", fontSize: '10px',
-            letterSpacing: '0.22em', color: 'rgba(200,169,126,0.65)',
-            textTransform: 'uppercase', margin: 0,
-          }}>
+          <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.22em', color: 'rgba(200,169,126,0.65)', textTransform: 'uppercase', margin: 0 }}>
             not tonight — but soon.
           </p>
-          <button
-            onClick={closeChamber}
-            style={{
-              background: 'transparent', color: '#F5EDE0',
-              border: '1px solid rgba(245,237,224,0.25)', padding: '12px',
-              fontFamily: "'Geist Mono', monospace", fontSize: '11px',
-              letterSpacing: '0.2em', textTransform: 'uppercase',
-              borderRadius: '2px', cursor: 'pointer',
-            }}
-          >
+          <button onClick={closeChamber} style={{
+            background: 'transparent', color: '#F5EDE0',
+            border: '1px solid rgba(245,237,224,0.25)', padding: '12px',
+            fontFamily: "'Geist Mono', monospace", fontSize: '11px',
+            letterSpacing: '0.2em', textTransform: 'uppercase',
+            borderRadius: '2px', cursor: 'pointer',
+          }}>
             close
           </button>
         </div>
@@ -666,7 +580,6 @@ export default function MenuPage() {
         <p style={{ textAlign: 'center', fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.2em', color: palette.brass, opacity: 0.6, textTransform: 'uppercase', margin: 0 }}>
           — for bean&apos;s favorite human —
         </p>
-        {/* BaristaDot hidden in kiosk — guests shouldn't stumble into the queue */}
         {!isKiosk && <BaristaDot onOpen={() => router.push('/barista')} palette={palette} />}
         {sheet}
         {chamber}
@@ -689,7 +602,7 @@ export default function MenuPage() {
         gap: '40px', maxWidth: '1200px', width: '100%', margin: '0 auto',
         transition: 'grid-template-columns 350ms cubic-bezier(0.4,0.0,0.2,1)', alignItems: 'start',
       }}>
-        <div style={{ display: 'flex', justifyContent: 'center', transition: 'transform 350ms cubic-bezier(0.4,0.0,0.2,1)' }}>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
           <div style={{ width: '100%', maxWidth: selectedDrink ? '600px' : '720px' }}>{board}</div>
         </div>
         {selectedDrink && barTab === 'cocktails' && (
@@ -713,18 +626,16 @@ export default function MenuPage() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PreviewPane — tablet cocktail preview (unchanged from original)
+// PreviewPane
 // ─────────────────────────────────────────────────────────────────────────────
-function PreviewPane({
-  drinkName, mode, palette, onCustomize, onDismiss,
-}: {
+function PreviewPane({ drinkName, mode, palette, onCustomize, onDismiss }: {
   drinkName: string; mode: 'cafe' | 'bar'; palette: typeof COLORS.cafe;
   onCustomize: () => void; onDismiss: () => void;
 }) {
   const cocktail = mode === 'bar' ? COCKTAILS.find(c => c.name === drinkName) : null;
   const coffee   = mode === 'cafe' ? DRINKS.find(d => d.name === drinkName) : null;
   const cocktailRecipe = cocktail ? COCKTAIL_RECIPES[cocktail.name] : null;
-  const coffeeRecipe   = coffee   ? RECIPES[coffee.name] : null;
+  const coffeeRecipe   = coffee ? RECIPES[coffee.name] : null;
   if (!cocktail && !coffee) return null;
 
   return (
@@ -739,7 +650,7 @@ function PreviewPane({
             {cocktail?.note ?? coffee?.note ?? ''}
           </p>
         </div>
-        <button onClick={onDismiss} aria-label="dismiss" style={{ background: 'transparent', border: 'none', color: palette.brass, fontSize: '20px', cursor: 'pointer', padding: '4px 8px', opacity: 0.5, lineHeight: 1 }}>×</button>
+        <button onClick={onDismiss} style={{ background: 'transparent', border: 'none', color: palette.brass, fontSize: '20px', cursor: 'pointer', padding: '4px 8px', opacity: 0.5, lineHeight: 1 }}>×</button>
       </div>
 
       {cocktailRecipe && (
@@ -784,8 +695,7 @@ function PreviewPane({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BaristaDot — long-press the brass shaker to enter /barista
-// Hidden from kiosk/guests via the isKiosk check in the parent
+// BaristaDot
 // ─────────────────────────────────────────────────────────────────────────────
 function BaristaDot({ onOpen, palette }: { onOpen: () => void; palette: { brass: string } }) {
   const [pressing, setPressing] = useState(false);
@@ -816,10 +726,9 @@ function BaristaDot({ onOpen, palette }: { onOpen: () => void; palette: { brass:
         WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none',
       }}
     >
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={palette.brass} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
-        style={{ opacity: pressing ? 0.9 : 0.35, transform: pressing ? 'scale(1.15)' : 'scale(1)', transition: 'opacity 200ms ease, transform 200ms ease' }}
-        aria-hidden="true"
-      >
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+        stroke={palette.brass} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
+        style={{ opacity: pressing ? 0.9 : 0.35, transform: pressing ? 'scale(1.15)' : 'scale(1)', transition: 'opacity 200ms ease, transform 200ms ease' }}>
         <path d="M9 3 L15 3 L15 6 L9 6 Z" /><path d="M8 6 L16 6 L15 21 L9 21 Z" /><path d="M10 11 L14 11" />
       </svg>
     </button>
