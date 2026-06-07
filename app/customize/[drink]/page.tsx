@@ -85,7 +85,7 @@ export default function CustomizePage({
       if (fav.quantity) setQuantity(fav.quantity);
       if (fav.spirit) setSpirit(fav.spirit);
     } else {
-      setTemp(fav.temp);
+      setTemp(fav.temp ?? 'hot');
       setMilk(fav.milk ?? (isMilkDrink ? 'whole' : null));
       setSyrups(fav.syrups || []);
       setSweetness(fav.sweetness || 'normal');
