@@ -1,5 +1,5 @@
-// All menu data lives here — the single source of truth for the customer menu
-// and the barista's recipe view.
+// All menu data lives here so it's the single source of truth for both
+// the customer-facing menu and the barista's recipe view.
 
 export const DRINKS = [
   { name: 'ESPRESSO',   jp: 'エスプレッソ',     price: '$4', note: 'double shot' },
@@ -45,12 +45,16 @@ export const NOTE_PLACEHOLDERS = [
   'anything else?',
 ];
 
+// Pump → oz conversion (barista side only — she sees pumps)
 export const PUMPS_TO_OZ: Record<string, string> = {
   light:  '¼ oz',
   normal: '½ oz',
   extra:  '1 oz',
 };
 
+// Recipe data. Hot and iced flows are different per the user's actual process:
+// for iced, syrup goes in first, espresso poured over, seasonings stirred in,
+// cold milk added, stirred, then poured over ice. No steaming for iced.
 export type Recipe = {
   base: string[];
   hot: string[];
@@ -103,18 +107,14 @@ export const RECIPES: Record<string, Recipe> = {
   },
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Shared types
-// ─────────────────────────────────────────────────────────────────────────────
-
 export type Order = {
   id: number;
   customer: string;
   drink: string;
-  temp: 'hot' | 'iced' | null;
+  temp: 'hot' | 'iced';
   milk: string | null;
   syrups: string[];
-  sweetness: string | null;
+  sweetness: string;
   extras: string[];
   notes: string;
   status: 'received' | 'brewing' | 'ready' | 'cancelled';
@@ -122,20 +122,18 @@ export type Order = {
   ready_phrase_en?: string | null;
   created_at: string;
   ready_at?: string | null;
-  // Bar / bottle fields
+  // Bar fields (optional — only set on cocktail orders)
   category?: 'cafe' | 'bar';
-  subcategory?: 'cocktail' | 'bottle' | null;
-  strength?: 'light' | 'standard' | 'strong' | null;
+  strength?: 'light' | 'standard' | 'strong';
   quantity?: number;
   spirit?: string | null;
-  mixer?: string | null;
 };
 
 export type Favorite = {
   id: number;
   label: string;
   drink: string;
-  temp: 'hot' | 'iced' | null;
+  temp: 'hot' | 'iced';
   milk: string | null;
   syrups: string[];
   sweetness: string;
@@ -143,21 +141,29 @@ export type Favorite = {
   notes: string;
   customer: string;
   category?: 'cafe' | 'bar';
-  subcategory?: 'cocktail' | 'bottle' | null;
-  strength?: 'light' | 'standard' | 'strong' | null;
+  strength?: 'light' | 'standard' | 'strong';
   quantity?: number;
   spirit?: string | null;
-  mixer?: string | null;
 };
 
 export const COLORS = {
   cafe: {
-    bg: '#1B3A2F', board: '#0A0A0A', surface: '#1A1A1A',
-    cream: '#F5EDE0', tileText: '#FFF8EC', brass: '#C8A97E', accent: '#A84438',
+    bg: '#1B3A2F',
+    board: '#0A0A0A',
+    surface: '#1A1A1A',
+    cream: '#F5EDE0',
+    tileText: '#FFF8EC',
+    brass: '#C8A97E',
+    accent: '#A84438',
   },
   bar: {
-    bg: '#1A2A3F', board: '#0A0A0A', surface: '#1A1A1A',
-    cream: '#F5EDE0', tileText: '#FFF8EC', brass: '#C8A97E', accent: '#A84438',
+    bg: '#1A2A3F',
+    board: '#0A0A0A',
+    surface: '#1A1A1A',
+    cream: '#F5EDE0',
+    tileText: '#FFF8EC',
+    brass: '#C8A97E',
+    accent: '#A84438',
   },
 };
 
@@ -165,59 +171,60 @@ export const COLORS = {
 // BAR — cocktails
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type GlassType = 'rocks' | 'highball' | 'coupe' | 'shot';
+// Each cocktail has a `display` field — the truncated string used on the
+// 16-char split-flap board. The `name` is the canonical key (used in URLs and DB).
+// The `glass` field selects the icon shown on the board.
+export type GlassType = 'rocks' | 'highball' | 'coupe';
 
 export const COCKTAILS = [
   { name: 'OLD FASHIONED',  display: 'OLD FASHIONED',  jp: 'オールドファッション',  note: 'bourbon · bitters · sugar',          glass: 'rocks'    as GlassType },
   { name: 'GIN & TONIC',    display: 'GIN & TONIC',    jp: 'ジントニック',          note: 'gin · tonic · lime',                 glass: 'highball' as GlassType },
   { name: 'DAIQUIRI',       display: 'DAIQUIRI',       jp: 'ダイキリ',              note: 'rum · lime · demerara',              glass: 'coupe'    as GlassType },
-  { name: 'ESPRESSO TINI',  display: 'ESPRESSO TINI',  jp: 'エスプレッソティーニ',  note: 'vodka · espresso · mr black',        glass: 'coupe'    as GlassType },
-  { name: 'GOLD COAST',     display: 'GOLD COAST',     jp: 'ゴールドコースト',      note: 'rye · honey · lemon · IPA',          glass: 'coupe'    as GlassType },
+  { name: 'ESPRESSO TINI',  display: 'ESPRESSO TINI',  jp: 'エスプレッソティーニ',  note: 'vodka · espresso · kahlua',          glass: 'coupe'    as GlassType },
+  { name: 'GOLD COAST',     display: 'GOLD COAST',     jp: 'ゴールドコースト',      note: 'bourbon · honey · lemon · IPA',      glass: 'coupe'    as GlassType },
   { name: 'GARDEN MULE',    display: 'GARDEN MULE',    jp: 'ガーデンミュール',      note: 'gin · hibiscus · ginger · berries',  glass: 'highball' as GlassType },
   { name: 'NEGRONI',        display: 'NEGRONI',        jp: 'ネグローニ',            note: 'gin · campari · sweet vermouth',     glass: 'rocks'    as GlassType },
   { name: 'HOUSE HIGHBALL', display: 'HOUSE HIGHBALL', jp: 'ハウスハイボール',      note: 'your spirit · soda · citrus',        glass: 'highball' as GlassType },
 ] as const;
 
+// Strength levels affect the base spirit pour (e.g. 1.5 / 2 / 2.5 oz for an Old Fashioned)
 export const STRENGTH_LEVELS = [
   { id: 'light',    label: 'light',    note: 'less booze' },
   { id: 'standard', label: 'standard', note: 'as written' },
   { id: 'strong',   label: 'strong',   note: 'extra pour' },
 ] as const;
 
+// Spirit options for the House Highball — your home bar inventory
 export const HIGHBALL_SPIRITS = [
-  { id: 'bourbon',  label: 'bourbon',  citrus: 'lemon' },
-  { id: 'rye',      label: 'rye',      citrus: 'lemon' },
-  { id: 'gin',      label: 'gin',      citrus: 'lime'  },
-  { id: 'vodka',    label: 'vodka',    citrus: 'lime'  },
-  { id: 'rum',      label: 'rum',      citrus: 'lime'  },
-  { id: 'tequila',  label: 'tequila',  citrus: 'lime'  },
+  { id: 'bourbon', label: 'bourbon', citrus: 'lemon' },
+  { id: 'gin',     label: 'gin',     citrus: 'lime'  },
+  { id: 'vodka',   label: 'vodka',   citrus: 'lime'  },
+  { id: 'rum',     label: 'rum',     citrus: 'lime'  },
 ] as const;
 
-// Maps highball spirit id → the actual bottle on your bar
-export const SPIRIT_BRANDS: Record<string, string> = {
-  bourbon:  'Old Forester 1920',
-  rye:      'Rittenhouse',
-  gin:      'Tanqueray No. TEN',
-  vodka:    "Tito's",
-  rum:      'Probitas',
-  tequila:  'Ocho',
-};
-
+// Cocktail-specific notes placeholders (rotates through these on the customize screen)
 export const COCKTAIL_NOTE_PLACEHOLDERS = [
-  'extra dirty', 'less sweet', 'big cube please', 'no garnish', 'on the rocks', 'anything else?',
+  'extra dirty',
+  'less sweet',
+  'big cube please',
+  'no garnish',
+  'on the rocks',
+  'anything else?',
 ];
 
+// Strength → base pour ounces (used in recipe view to show actual oz to the bartender)
 export const STRENGTH_TO_OZ: Record<string, string> = {
   light:    '1.5 oz',
   standard: '2 oz',
   strong:   '2.5 oz',
 };
 
+// Cocktail recipes — same shape as coffee RECIPES but with glass + garnish surfaced
 export type CocktailRecipe = {
   glass: GlassType;
   glassLabel: string;
   garnish: string;
-  ingredients: string[];
+  ingredients: string[];   // listed at standard strength; bartender adjusts based on order
   steps: string[];
 };
 
@@ -227,7 +234,7 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
     glassLabel: 'rocks glass, large cube',
     garnish: 'orange peel, expressed',
     ingredients: [
-      '2 oz Old Forester 1920 bourbon',
+      '2 oz bourbon',
       '¼ oz simple syrup (or 1 sugar cube + splash water)',
       '2 dashes Angostura bitters',
       '1 dash orange bitters',
@@ -244,7 +251,7 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
     glassLabel: 'highball, lots of ice',
     garnish: 'lime wheel',
     ingredients: [
-      '2 oz Tanqueray No. TEN gin',
+      '2 oz gin',
       '4 oz tonic water',
       '¼ oz fresh lime juice',
     ],
@@ -260,7 +267,7 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
     glassLabel: 'chilled coupe',
     garnish: 'lime wheel on rim',
     ingredients: [
-      '2 oz Probitas white rum',
+      '2 oz Ron Allegro Añejo rum',
       '¾ oz fresh lime juice',
       '½ oz demerara syrup',
     ],
@@ -276,9 +283,9 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
     glassLabel: 'chilled coupe',
     garnish: '3 coffee beans floated on foam',
     ingredients: [
-      "2 oz Tito's vodka",
+      '2 oz Tito\'s vodka',
       '1 oz fresh espresso (single shot, 9g in / ~1 oz out)',
-      '½ oz Mr Black coffee liqueur',
+      '½ oz Kahlua',
       '¼ oz simple syrup',
     ],
     steps: [
@@ -300,10 +307,10 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
       '½ oz hazy IPA (float)',
     ],
     steps: [
-      'Combine rye, honey syrup, lemon in shaker with ice',
+      'Combine bourbon, honey syrup, lemon in shaker with ice',
       'Shake hard, 12 seconds',
       'Double-strain into chilled coupe',
-      "Gently pour IPA over the back of a bar spoon for the float",
+      'Gently pour IPA over the back of a bar spoon for the float',
       'Express lemon peel, discard',
     ],
   },
@@ -312,14 +319,14 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
     glassLabel: 'highball, one large round cube',
     garnish: 'berry skewer + mint sprig',
     ingredients: [
-      '2 oz Tanqueray No. TEN gin',
+      '2 oz Esme gin',
       '4–5 mixed berries (blackberry, raspberry, strawberry)',
       '¾ oz fresh lime juice',
       '2 oz hibiscus ginger beer',
       '1 oz tonic water',
     ],
     steps: [
-      "Muddle berries gently in shaker (don't pulverize)",
+      'Muddle berries gently in shaker (don\'t pulverize)',
       'Add gin, lime, ice; shake briefly, 8 seconds',
       'Double-strain into highball over one large round cube',
       'Top with hibiscus ginger beer, then tonic',
@@ -331,7 +338,7 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
     glassLabel: 'rocks glass, large cube',
     garnish: 'orange peel, expressed',
     ingredients: [
-      '1 oz Tanqueray No. TEN gin',
+      '1 oz gin',
       '1 oz Campari',
       '1 oz sweet vermouth',
     ],
@@ -345,7 +352,7 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
   'HOUSE HIGHBALL': {
     glass: 'highball',
     glassLabel: 'highball, lots of ice',
-    garnish: 'citrus to match (lemon for bourbon/rye/gin, lime for vodka/rum/tequila)',
+    garnish: 'citrus to match (lemon for bourbon/gin, lime for vodka/rum)',
     ingredients: [
       '2 oz spirit (your choice)',
       '4 oz soda water (or topo chico)',
@@ -358,83 +365,4 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
       'Squeeze citrus, drop wedge in',
     ],
   },
-  // ── Secret item — not on the menu ──────────────────────────────────────────
-  'BABY GUINNESS': {
-    glass: 'shot',
-    glassLabel: 'shot glass',
-    garnish: 'none — the cream head is the garnish',
-    ingredients: [
-      '¾ oz Mr Black coffee liqueur',
-      '¼ oz Baileys Irish Cream (float)',
-    ],
-    steps: [
-      'Pour Mr Black into shot glass',
-      "Float Baileys gently over the back of a bar spoon — the cream sits on top like the head of a pint",
-      'Serve immediately — it separates quickly',
-    ],
-  },
-};
-
-// Secret item reference (not in COCKTAILS array — hidden from the board)
-export const BABY_GUINNESS = {
-  name: 'BABY GUINNESS',
-  jp: 'ベイビーギネス',
-  note: 'mr black · baileys float',
-  glass: 'shot' as GlassType,
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BAR — bottles & pours (beer, cider, wine, spirits)
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type BottleType = 'beer' | 'cider' | 'wine' | 'spirit';
-
-export const BEER = [
-  { name: 'TWO HEARTED',  display: "TWO HEARTED",  jp: 'ツーハーテッド',   note: "bell's · ipa",           type: 'beer' as BottleType },
-  { name: 'HAZY IPA',     display: 'HAZY IPA',     jp: 'ヘイジーIPA',      note: "bell's · hazy ipa",      type: 'beer' as BottleType },
-  { name: 'BEST BROWN',   display: 'BEST BROWN',   jp: 'ベストブラウン',   note: "bell's · brown ale",     type: 'beer' as BottleType },
-  { name: 'GOLDEN RYE',   display: 'GOLDEN RYE',   jp: 'ゴールデンライ',   note: "bell's · golden rye ale", type: 'beer' as BottleType },
-] as const;
-
-export const CIDERS = [
-  { name: 'RIGHT BEE',    display: 'RIGHT BEE',    jp: 'ライトビー',       note: 'right bee · hard cider', type: 'cider' as BottleType },
-] as const;
-
-// Wine placeholder — add your bottles here
-export const WINES: { name: string; display: string; jp: string; note: string; type: BottleType }[] = [];
-
-export const SPIRITS = [
-  { name: 'TITOS',         display: "TITO'S",       jp: 'ティトーズ',        note: 'vodka',           type: 'spirit' as BottleType },
-  { name: 'RITTENHOUSE',   display: 'RITTENHOUSE',  jp: 'リッテンハウス',    note: 'rye',             type: 'spirit' as BottleType },
-  { name: 'OLD FORESTER',  display: 'OLD FORESTER', jp: 'オールドフォレスター', note: 'bourbon · 1920',  type: 'spirit' as BottleType },
-  { name: 'PROBITAS',      display: 'PROBITAS',     jp: 'プロビタス',        note: 'white rum',       type: 'spirit' as BottleType },
-  { name: 'OCHO',          display: 'OCHO',         jp: 'オチョ',           note: 'tequila',         type: 'spirit' as BottleType },
-  { name: 'TANQUERAY TEN', display: 'TANQ TEN',     jp: 'タンカレーテン',   note: 'gin',             type: 'spirit' as BottleType },
-  { name: 'MR BLACK',      display: 'MR BLACK',     jp: 'ミスターブラック', note: 'coffee liqueur',  type: 'spirit' as BottleType },
-] as const;
-
-export const ALL_BOTTLES = [
-  ...BEER, ...CIDERS, ...WINES, ...SPIRITS,
-] as const;
-
-// Mixer options for spirits pours (neat/on the rocks/mixed)
-export const SPIRITS_MIXERS = [
-  { id: 'neat',   label: 'neat'   },
-  { id: 'rocks',  label: 'rocks'  },
-  { id: 'soda',   label: 'soda'   },
-  { id: 'tonic',  label: 'tonic'  },
-  { id: 'coke',   label: 'coke'   },
-  { id: 'ginger', label: 'ginger' },
-  { id: 'lime',   label: 'lime'   },
-] as const;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Glassware — game-night inventory (4 of each)
-// ─────────────────────────────────────────────────────────────────────────────
-
-export const GLASS_COUNTS: Record<string, number> = {
-  rocks:   4,
-  highball: 4,
-  coupe:   4,
-  shot:    4,
 };
