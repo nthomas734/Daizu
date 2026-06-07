@@ -348,16 +348,17 @@ export default function MenuPage() {
           opacity={beanHolding ? 0.9 : 0}
         />
       </svg>
-      <Logo
-        size={isTablet ? 40 : 36}
-        color={palette.brass}
-        stroke={6}
-        style={{
-          filter: beanHolding ? `drop-shadow(0 0 6px ${palette.brass}99)` : 'none',
-          transform: beanHolding ? 'scale(1.06)' : 'scale(1)',
-          transition: 'filter 0.3s ease, transform 0.2s ease',
-        }}
-      />
+      <div style={{
+  filter: beanHolding ? `drop-shadow(0 0 6px ${palette.brass}99)` : 'none',
+  transform: beanHolding ? 'scale(1.06)' : 'scale(1)',
+  transition: 'filter 0.3s ease, transform 0.2s ease',
+}}>
+  <Logo
+    size={isTablet ? 40 : 36}
+    color={palette.brass}
+    stroke={6}
+  />
+</div>
     </button>
   );
 
