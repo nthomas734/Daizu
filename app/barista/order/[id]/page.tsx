@@ -180,7 +180,7 @@ export default function BaristaOrderPage({
             borderRadius: '2px',
           }}
         >
-          ● {order.status}
+          ● {order.status === 'brewing' && isCocktail ? 'mixing' : order.status}
         </span>
       </div>
 
@@ -543,7 +543,7 @@ export default function BaristaOrderPage({
               {readyPhrase.jp}
             </p>
             <p style={{ margin: 0, fontSize: '13px', opacity: 0.85, lineHeight: 1.35 }}>
-              {order.customer}&apos;s {order.drink.toLowerCase()} is ready ☕
+              {order.customer}&apos;s {order.drink.toLowerCase()} is ready {isCocktail ? '🍸' : '☕'}
               <span
                 style={{
                   display: 'block',

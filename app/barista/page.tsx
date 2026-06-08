@@ -612,7 +612,7 @@ function QueueBody({ active, palette, onPick, onDelete, onClearAll }: {
                     borderRadius: '20px', fontWeight: 600,
                     display: 'inline-block',
                   }}>
-                    {order.status === 'received' ? '● new' : order.status}
+                    {order.status === 'received' ? '● new' : (order.status === 'brewing' && order.category === 'bar' ? '● mixing' : order.status)}
                   </span>
                   <p style={{ margin: '5px 0 0', fontSize: '10px', color: palette.bg, opacity: 0.4, fontFamily: "'Geist Mono', monospace" }}>
                     {timeAgo(order.created_at)}

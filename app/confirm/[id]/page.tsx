@@ -5,12 +5,6 @@ import { useRouter } from 'next/navigation';
 import { COLORS, Order } from '@/lib/menu';
 import { FlapRow } from '@/components/SplitFlap';
 
-const STATUSES: { id: Order['status']; label: string }[] = [
-  { id: 'received', label: 'received' },
-  { id: 'brewing',  label: 'brewing' },
-  { id: 'ready',    label: 'ready' },
-];
-
 export default function ConfirmPage({
   params,
 }: {
@@ -25,9 +19,17 @@ export default function ConfirmPage({
 
   const [order, setOrder] = useState<Order | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(5);
+  const [showReturn, setShowReturn] = useState(false);
 
   const isCocktail = order?.category === 'bar';
   const palette = isCocktail ? COLORS.bar : COLORS.cafe;
+
+  // Build STATUSES with contextual brewing/mixing label
+  const STATUSES: { id: Order['status']; label: string }[] = [
+    { id: 'received', label: 'received' },
+    { id: 'brewing',  label: isCocktail ? 'mixing' : 'brewing' },
+    { id: 'ready',    label: 'ready' },
+  ];
 
   // Poll for status updates every 3 seconds
   useEffect(() => {
@@ -55,6 +57,11 @@ export default function ConfirmPage({
     const t = setInterval(() => setSecondsLeft((s) => s - 1), 1000);
     return () => clearInterval(t);
   }, [canCancel]);
+
+  // Show the "back to menu" flapboard once the cancel window closes
+  useEffect(() => {
+    if (secondsLeft === 0 && order) setShowReturn(true);
+  }, [secondsLeft, order]);
 
   const cancel = async () => {
     await fetch(`/api/orders/${id}`, { method: 'DELETE' });
@@ -163,7 +170,7 @@ export default function ConfirmPage({
             margin: '8px 0 0',
           }}
         >
-          {isReady ? order.ready_phrase_en || 'ready' : 'arigatō · thank you'}
+          {isReady ? order.ready_phrase_en || 'ready' : isCocktail ? 'kanpai · cheers' : 'arigatō · thank you'}
         </p>
       </div>
 
@@ -297,6 +304,37 @@ export default function ConfirmPage({
         >
           cancel · {secondsLeft}s
         </button>
+      )}
+
+      {/* Flapboard return button — appears after cancel window closes */}
+      {showReturn && !isReady && (
+        <>
+          <button
+            onClick={() => router.push(backUrl)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, animation: 'returnFadeIn 500ms ease both' }}
+            aria-label="back to menu"
+          >
+            <div
+              style={{
+                background: palette.board,
+                padding: '16px 14px',
+                borderRadius: '6px',
+                border: `1px solid ${palette.brass}33`,
+                boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)',
+              }}
+            >
+              <FlapRow
+                text="BACK TO MENU"
+                width={12}
+                startDelay={0}
+                palette={palette}
+                jp={false}
+                refreshKey={1}
+              />
+            </div>
+          </button>
+          <style>{`@keyframes returnFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+        </>
       )}
 
       {isReady && (
