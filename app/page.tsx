@@ -389,8 +389,6 @@ export default function MenuPage() {
         boxSizing: 'border-box',
       }}
     >
-      {/* Constrain header + board to same width so → CAFE button aligns with board edge */}
-      <div style={{ width: '100%', maxWidth: selectedDrink ? '1200px' : 'fit-content', minWidth: selectedDrink ? '800px' : undefined }}>
       {header}
 
       <div
@@ -426,8 +424,6 @@ export default function MenuPage() {
             onDismiss={() => setSelectedDrink(null)}
           />
         )}
-      </div>
-
       </div>
 
       <p
