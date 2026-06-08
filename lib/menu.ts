@@ -178,7 +178,7 @@ export const COLORS = {
 export type GlassType = 'rocks' | 'highball' | 'coupe';
 
 export const COCKTAILS = [
-  { name: 'OLD FASHIONED',  display: 'OLD FASHIONED',  jp: 'オールドファッション',  note: 'bourbon · bitters · sugar',          glass: 'rocks'    as GlassType },
+  { name: 'OLD FASHIONED',  display: 'OLD FASHIONED',  jp: 'オールドファッション',  note: 'rye · bitters · sugar',          glass: 'rocks'    as GlassType },
   { name: 'GIN & TONIC',    display: 'GIN & TONIC',    jp: 'ジントニック',          note: 'gin · tonic · lime',                 glass: 'highball' as GlassType },
   { name: 'DAIQUIRI',       display: 'DAIQUIRI',       jp: 'ダイキリ',              note: 'rum · lime · demerara',              glass: 'coupe'    as GlassType },
   { name: 'ESPRESSO TINI',  display: 'ESPRESSO TINI',  jp: 'エスプレッソティーニ',  note: 'vodka · espresso · mr black',          glass: 'coupe'    as GlassType },
@@ -197,7 +197,7 @@ export const STRENGTH_LEVELS = [
 
 // Spirit options for the House Highball — your home bar inventory
 export const HIGHBALL_SPIRITS = [
-  { id: 'bourbon', label: 'bourbon', citrus: 'lemon' },
+  { id: 'rye',     label: 'rye',     citrus: 'lemon' },
   { id: 'gin',     label: 'gin',     citrus: 'lime'  },
   { id: 'vodka',   label: 'vodka',   citrus: 'lime'  },
   { id: 'rum',     label: 'rum',     citrus: 'lime'  },
@@ -235,7 +235,7 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
     glassLabel: 'rocks glass, large cube',
     garnish: 'orange peel, expressed',
     ingredients: [
-      '2 oz bourbon',
+      '2 oz Rittenhouse rye',
       '¼ oz simple syrup (or 1 sugar cube + splash water)',
       '2 dashes Angostura bitters',
       '1 dash orange bitters',
@@ -252,7 +252,7 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
     glassLabel: 'highball, lots of ice',
     garnish: 'lime wheel',
     ingredients: [
-      '2 oz gin',
+      '2 oz Tanqueray No. TEN gin',
       '4 oz tonic water',
       '¼ oz fresh lime juice',
     ],
@@ -268,7 +268,7 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
     glassLabel: 'chilled coupe',
     garnish: 'lime wheel on rim',
     ingredients: [
-      '2 oz Ron Allegro Añejo rum',
+      '2 oz Probitas white rum',
       '¾ oz fresh lime juice',
       '½ oz demerara syrup',
     ],
@@ -320,7 +320,7 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
     glassLabel: 'highball, one large round cube',
     garnish: 'berry skewer + mint sprig',
     ingredients: [
-      '2 oz Esme gin',
+      '2 oz Tanqueray No. TEN gin',
       '4–5 mixed berries (blackberry, raspberry, strawberry)',
       '¾ oz fresh lime juice',
       '2 oz hibiscus ginger beer',
@@ -339,7 +339,7 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
     glassLabel: 'rocks glass, large cube',
     garnish: 'orange peel, expressed',
     ingredients: [
-      '1 oz gin',
+      '1 oz Tanqueray No. TEN gin',
       '1 oz Campari',
       '1 oz sweet vermouth',
     ],
