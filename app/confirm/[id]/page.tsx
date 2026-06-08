@@ -120,6 +120,13 @@ export default function ConfirmPage({
         margin: '0 auto',
       }}
     >
+      {/* Waiting animation — loops until order is ready */}
+      {!isReady && (
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          {isCocktail ? <ShakerAnimation /> : <PouringAnimation />}
+        </div>
+      )}
+
       <div
         onPointerDown={startBoardPress}
         onPointerUp={cancelBoardPress}
@@ -158,7 +165,7 @@ export default function ConfirmPage({
             fontWeight: 300,
           }}
         >
-          {isReady ? order.ready_phrase_jp || 'おまたせしました' : 'ありがとう'}
+          {isReady ? order.ready_phrase_jp || 'おまたせしました' : isCocktail ? '乾杯' : 'ありがとう'}
         </p>
         <p
           style={{
@@ -369,3 +376,64 @@ const wrap = {
   justifyContent: 'center',
   padding: '40px',
 };
+
+const B = '#C8A97E';
+
+function PouringAnimation() {
+  return (
+    <>
+      <style>{`
+        @keyframes drip1{0%,30%{transform:translateY(0);opacity:0}35%{opacity:1}90%{opacity:1}100%{transform:translateY(36px);opacity:0}}
+        @keyframes drip2{0%,30%{transform:translateY(0);opacity:0}35%{opacity:1}90%{opacity:1}100%{transform:translateY(34px);opacity:0}}
+      `}</style>
+      <svg viewBox="0 0 80 90" width="72" height="81" style={{ overflow: 'visible' }}>
+        <path d="M 22,4 L 58,4 L 58,16 L 22,16 Z" fill="none" stroke={B} strokeWidth={1.8} strokeLinejoin="round"/>
+        <path d="M 58,8 Q 68,8 68,14 Q 68,20 58,20" fill="none" stroke={B} strokeWidth={1.8} strokeLinecap="round"/>
+        <line x1="22" y1="4" x2="22" y2="16" stroke={B} strokeWidth={1} opacity={0.35}/>
+        <line x1="30" y1="4" x2="30" y2="16" stroke={B} strokeWidth={1} opacity={0.35}/>
+        <line x1="38" y1="4" x2="38" y2="16" stroke={B} strokeWidth={1} opacity={0.35}/>
+        <line x1="46" y1="4" x2="46" y2="16" stroke={B} strokeWidth={1} opacity={0.35}/>
+        <line x1="54" y1="4" x2="54" y2="16" stroke={B} strokeWidth={1} opacity={0.35}/>
+        <line x1="30" y1="16" x2="27" y2="28" stroke={B} strokeWidth={1.5} strokeLinecap="round" opacity={0.6}/>
+        <line x1="50" y1="16" x2="53" y2="28" stroke={B} strokeWidth={1.5} strokeLinecap="round" opacity={0.6}/>
+        <circle cx="27" cy="30" r="2.8" fill={B} style={{ animation: 'drip1 1.6s ease-in infinite 0s' }}/>
+        <circle cx="27" cy="37" r="2.2" fill={B} opacity={0.75} style={{ animation: 'drip1 1.6s ease-in infinite 0.28s' }}/>
+        <circle cx="27" cy="44" r="1.6" fill={B} opacity={0.5} style={{ animation: 'drip1 1.6s ease-in infinite 0.56s' }}/>
+        <circle cx="53" cy="30" r="2.8" fill={B} style={{ animation: 'drip2 1.6s ease-in infinite 0.18s' }}/>
+        <circle cx="53" cy="37" r="2.2" fill={B} opacity={0.75} style={{ animation: 'drip2 1.6s ease-in infinite 0.46s' }}/>
+        <circle cx="53" cy="44" r="1.6" fill={B} opacity={0.5} style={{ animation: 'drip2 1.6s ease-in infinite 0.74s' }}/>
+        <path d="M 18,64 L 20,74 L 60,74 L 62,64 Z" fill="none" stroke={B} strokeWidth={1.8} strokeLinejoin="round"/>
+        <line x1="16" y1="64" x2="64" y2="64" stroke={B} strokeWidth={1.8} strokeLinecap="round"/>
+        <ellipse cx="40" cy="76" rx="24" ry="3" fill="none" stroke={B} strokeWidth={1.5}/>
+      </svg>
+    </>
+  );
+}
+
+function ShakerAnimation() {
+  return (
+    <>
+      <style>{`
+        @keyframes shakerRock{0%,100%{transform:rotate(-14deg) translateX(-2px)}50%{transform:rotate(14deg) translateX(2px)}}
+        @keyframes iceFly1{0%,60%{transform:translate(0,0) rotate(0deg);opacity:0}65%{opacity:.9}100%{transform:translate(12px,-10px) rotate(45deg);opacity:0}}
+        @keyframes iceFly2{0%,55%{transform:translate(0,0) rotate(0deg);opacity:0}60%{opacity:.8}100%{transform:translate(-11px,-8px) rotate(-30deg);opacity:0}}
+        @keyframes iceFly3{0%,70%{transform:translate(0,0);opacity:0}75%{opacity:.7}100%{transform:translate(5px,-14px);opacity:0}}
+      `}</style>
+      <div style={{ animation: 'shakerRock 600ms ease-in-out infinite', transformOrigin: 'center bottom' }}>
+        <svg viewBox="0 0 80 90" width="72" height="81" style={{ overflow: 'visible' }}>
+          <path d="M 26,32 L 30,72 L 50,72 L 54,32 Z" fill="none" stroke={B} strokeWidth={1.8} strokeLinejoin="round"/>
+          <rect x="24" y="20" width="32" height="14" rx={4} fill="none" stroke={B} strokeWidth={1.8}/>
+          <line x1="26" y1="34" x2="54" y2="34" stroke={B} strokeWidth={1.2} opacity={0.5}/>
+          <line x1="30" y1="66" x2="50" y2="66" stroke={B} strokeWidth={1.2} opacity={0.5}/>
+          <circle cx="35" cy="27" r="1.5" fill={B} opacity={0.5}/>
+          <circle cx="40" cy="27" r="1.5" fill={B} opacity={0.5}/>
+          <circle cx="45" cy="27" r="1.5" fill={B} opacity={0.5}/>
+          <path d="M 30,46 L 35,42 L 32,50 L 38,44" fill="none" stroke={B} strokeWidth={1.2} strokeLinecap="round" strokeLinejoin="round" opacity={0.4}/>
+          <circle cx="22" cy="38" r="2" fill={B} opacity={0.7} style={{ animation: 'iceFly2 1.8s ease-out infinite' }}/>
+          <circle cx="58" cy="36" r="1.5" fill={B} opacity={0.6} style={{ animation: 'iceFly1 1.8s ease-out 0.3s infinite' }}/>
+          <circle cx="40" cy="22" r="1.5" fill={B} opacity={0.5} style={{ animation: 'iceFly3 1.8s ease-out 0.6s infinite' }}/>
+        </svg>
+      </div>
+    </>
+  );
+}

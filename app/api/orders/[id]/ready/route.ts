@@ -7,8 +7,16 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const phrase = pickReadyPhrase();
   const sb = supabaseAdmin();
+
+  // Fetch category first so the ready phrase is appropriate for café vs bar
+  const { data: existing } = await sb
+    .from('daizu_orders')
+    .select('category')
+    .eq('id', id)
+    .single();
+  const category = (existing?.category === 'bar' ? 'bar' : 'cafe') as 'cafe' | 'bar';
+  const phrase = pickReadyPhrase(category);
 
   const { data, error } = await sb
     .from('daizu_orders')
