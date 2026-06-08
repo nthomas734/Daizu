@@ -21,12 +21,14 @@ export default function MenuPage() {
   const isTablet = viewport === 'tablet';
 
   const [mode, setMode] = useState<'cafe' | 'bar'>('cafe');
+  const [isKiosk, setIsKiosk] = useState(false);
 
-  // On mount, read ?mode=bar from the URL to initialize bar mode
+  // On mount, read ?mode=bar from the URL or /bar pathname to initialize bar/kiosk mode
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('mode') === 'bar') {
+    if (params.get('mode') === 'bar' || window.location.pathname.startsWith('/bar')) {
       setMode('bar');
+      setIsKiosk(true);
     }
   }, []);
   const [lang, setLang] = useState<'jp' | 'en'>('jp');
@@ -266,6 +268,7 @@ export default function MenuPage() {
           </span>
         </div>
       </div>
+      {!isKiosk && (
       <button
         onClick={() => setMode(mode === 'cafe' ? 'bar' : 'cafe')}
         style={{
@@ -283,6 +286,7 @@ export default function MenuPage() {
       >
         {mode === 'cafe' ? '→ bar' : '→ cafe'}
       </button>
+      )}
     </header>
   );
 

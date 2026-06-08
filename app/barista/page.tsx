@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/Logo';
 import { SwipeRow } from '@/components/SwipeRow';
 import {
+  COCKTAIL_RECIPES,
   COCKTAILS,
   COLORS,
   DRINKS,
@@ -12,9 +13,11 @@ import {
   MILK_DRINKS,
   MILKS,
   Order,
+  STRENGTH_TO_OZ,
   SYRUPS,
 } from '@/lib/menu';
 import { timeAgo } from '@/lib/time';
+import { useViewport } from '@/lib/useViewport';
 
 type OutOfStock = { drinks: string[]; milks: string[]; syrups: string[] };
 
@@ -184,6 +187,8 @@ function PosIcon({ type }: { type: string }) {
 export default function BaristaHubPage() {
   const router = useRouter();
   const palette = COLORS.cafe;
+  const viewport = useViewport();
+  const isTablet = viewport === 'tablet';
   const [tab, setTab] = useState<'queue' | 'order' | 'stats' | 'settings'>('queue');
   const [orders, setOrders] = useState<Order[]>([]);
   const [outOfStock, setOutOfStock] = useState<OutOfStock>({ drinks: [], milks: [], syrups: [] });
@@ -245,7 +250,7 @@ export default function BaristaHubPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: palette.cream, color: palette.bg, width: '100%' }}>
-      <div style={{ minHeight: '100vh', fontFamily: "'Manrope', sans-serif", maxWidth: '480px', margin: '0 auto' }}>
+      <div style={{ minHeight: '100vh', fontFamily: "'Manrope', sans-serif", maxWidth: isTablet ? '1200px' : '480px', margin: '0 auto', width: '100%' }}>
 
         {/* Header */}
         <div style={{ background: palette.bg, color: palette.cream, padding: '16px 20px 12px' }}>
@@ -295,7 +300,7 @@ export default function BaristaHubPage() {
         {tab === 'queue' && (
           <QueueBody active={active} palette={palette} onPick={(id) => router.push(`/barista/order/${id}`)} onDelete={deleteOrder} onClearAll={clearAll} />
         )}
-        {tab === 'order' && <OrderBody palette={palette} />}
+        {tab === 'order' && <OrderBody palette={palette} isTablet={isTablet} />}
         {tab === 'stats' && <StatsBody orders={orders} palette={palette} />}
         {tab === 'settings' && (
           <SettingsBody outOfStock={outOfStock} onToggle={toggleStock} palette={palette} />
@@ -308,7 +313,7 @@ export default function BaristaHubPage() {
 // ─────────────────────────────────────────────────────────────────────────────
 // OrderBody — bartender POS
 // ─────────────────────────────────────────────────────────────────────────────
-function OrderBody({ palette }: { palette: any }) {
+function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
   const [menuMode, setMenuMode] = useState<'bar' | 'cafe'>('bar');
   const [selected, setSelected]   = useState<PosItem | null>(null);
   const [strength, setStrength]   = useState<'light' | 'standard' | 'strong'>('standard');
@@ -322,6 +327,7 @@ function OrderBody({ palette }: { palette: any }) {
   const items = menuMode === 'bar' ? BAR_ITEMS : CAFE_ITEMS;
   const isHighball = selected?.name === 'HOUSE HIGHBALL';
   const isMilkDrink = selected ? MILK_DRINKS.includes(selected.name) : false;
+  const cocktailRecipe = selected?.cat === 'bar' ? COCKTAIL_RECIPES[selected.name] : null;
 
   const selectItem = (item: PosItem) => {
     setSelected(item);
@@ -377,155 +383,148 @@ function OrderBody({ palette }: { palette: any }) {
     </button>
   );
 
+  const labelStyle: React.CSSProperties = {
+    fontFamily: "'Geist Mono', monospace", fontSize: '9px',
+    letterSpacing: '0.2em', textTransform: 'uppercase',
+    color: palette.brass, margin: '0 0 8px',
+  };
+
+  const orderPanel = selected && !sent && (
+    <div style={{ background: '#fff', border: `0.5px solid ${palette.bg}11`, borderRadius: '14px', padding: '16px', ...(isTablet ? {} : { marginTop: '12px' }) }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+        <div>
+          <p style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', margin: 0, color: palette.bg, fontWeight: 300 }}>{selected.display}</p>
+          <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', color: palette.brass, margin: '2px 0 0', letterSpacing: '0.08em' }}>{selected.note}</p>
+        </div>
+        <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', color: `${palette.bg}44`, fontSize: '18px', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+      </div>
+
+      {/* ingredients — cocktails only */}
+      {cocktailRecipe && (
+        <div style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: `0.5px solid ${palette.bg}15` }}>
+          <p style={labelStyle}>ingredients</p>
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            {cocktailRecipe.ingredients.map((ing, i) => {
+              const baseOz = STRENGTH_TO_OZ[strength] || '2 oz';
+              const scaled = ing.replace(/^2 oz/, baseOz);
+              return (
+                <li key={i} style={{ fontSize: '12px', color: palette.bg, opacity: 0.75 }}>
+                  · {scaled}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      {/* spirit picker — highball only */}
+      {isHighball && (
+        <div style={{ marginBottom: '14px' }}>
+          <p style={labelStyle}>spirit</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {HIGHBALL_SPIRITS.map((s) => (
+              <button key={s.id} onClick={() => setSpirit(s.id)} style={{ padding: '7px 12px', border: `0.5px solid ${spirit === s.id ? palette.bg : `${palette.bg}22`}`, borderRadius: '8px', background: spirit === s.id ? palette.bg : 'transparent', color: spirit === s.id ? palette.cream : palette.bg, fontFamily: "'Manrope', sans-serif", fontSize: '12px', cursor: 'pointer', transition: 'all 150ms ease' }}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* strength or temp */}
+      {selected.cat === 'bar' ? (
+        <div style={{ marginBottom: '14px' }}>
+          <p style={labelStyle}>strength</p>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {pill('light', strength === 'light', () => setStrength('light'))}
+            {pill('standard', strength === 'standard', () => setStrength('standard'))}
+            {pill('strong', strength === 'strong', () => setStrength('strong'))}
+          </div>
+        </div>
+      ) : (
+        <div style={{ marginBottom: '14px' }}>
+          <p style={labelStyle}>temperature</p>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {pill('hot', temp === 'hot', () => setTemp('hot'))}
+            {pill('iced', temp === 'iced', () => setTemp('iced'))}
+          </div>
+        </div>
+      )}
+
+      {/* quantity */}
+      <div style={{ marginBottom: '14px' }}>
+        <p style={labelStyle}>quantity</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button onClick={() => setQty(Math.max(1, qty - 1))} disabled={qty <= 1} style={{ width: 32, height: 32, border: `0.5px solid ${palette.bg}22`, borderRadius: '8px', background: 'none', fontSize: '17px', cursor: qty <= 1 ? 'default' : 'pointer', color: palette.bg, opacity: qty <= 1 ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>−</button>
+          <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', minWidth: '22px', textAlign: 'center', color: palette.bg, fontWeight: 300 }}>{qty}</span>
+          <button onClick={() => setQty(Math.min(4, qty + 1))} disabled={qty >= 4} style={{ width: 32, height: 32, border: `0.5px solid ${palette.bg}22`, borderRadius: '8px', background: 'none', fontSize: '17px', cursor: qty >= 4 ? 'default' : 'pointer', color: palette.bg, opacity: qty >= 4 ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>+</button>
+          {qty > 1 && <span style={{ fontSize: '12px', color: `${palette.bg}55`, fontStyle: 'italic' }}>{qty} drinks</span>}
+        </div>
+      </div>
+
+      {/* name */}
+      <div style={{ marginBottom: '12px' }}>
+        <p style={labelStyle}>name</p>
+        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="guest name" style={{ width: '100%', boxSizing: 'border-box', border: `0.5px solid ${palette.bg}22`, borderRadius: '8px', padding: '9px 10px', fontSize: '13px', background: '#fff', color: palette.bg, outline: 'none', fontFamily: "'Manrope', sans-serif" }} />
+      </div>
+
+      <button onClick={handleSubmit} disabled={submitting} style={{ width: '100%', padding: '13px', background: palette.bg, color: palette.cream, border: 'none', borderRadius: '10px', fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.22em', textTransform: 'uppercase', cursor: submitting ? 'wait' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
+        {submitting ? 'sending…' : 'send to queue →'}
+      </button>
+    </div>
+  );
+
+  const sentBanner = sent && (
+    <div style={{ background: '#fff', border: `0.5px solid ${palette.bg}11`, borderRadius: '14px', padding: '28px 16px', textAlign: 'center', ...(isTablet ? {} : { marginTop: '12px' }) }}>
+      <p style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 300, color: palette.bg, margin: '0 0 4px' }}>queued.</p>
+      <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', color: palette.brass, letterSpacing: '0.2em', textTransform: 'uppercase', margin: 0 }}>{selected?.display} · in the queue</p>
+    </div>
+  );
+
   return (
     <div style={{ padding: '14px' }}>
       {/* cocktails / coffee toggle */}
       <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
         {(['bar', 'cafe'] as const).map((m) => (
-          <button
-            key={m}
-            onClick={() => { setMenuMode(m); setSelected(null); setSent(false); }}
-            style={{
-              flex: 1, padding: '8px 0',
-              border: `0.5px solid ${menuMode === m ? palette.brass : `${palette.brass}44`}`,
-              borderRadius: '8px',
-              background: menuMode === m ? palette.brass : 'transparent',
-              color: menuMode === m ? palette.bg : palette.brass,
-              fontFamily: "'Geist Mono', monospace", fontSize: '9px',
-              letterSpacing: '0.15em', textTransform: 'uppercase',
-              cursor: 'pointer', transition: 'all 150ms ease',
-            }}
-          >
+          <button key={m} onClick={() => { setMenuMode(m); setSelected(null); setSent(false); }} style={{ flex: 1, padding: '8px 0', border: `0.5px solid ${menuMode === m ? palette.brass : `${palette.brass}44`}`, borderRadius: '8px', background: menuMode === m ? palette.brass : 'transparent', color: menuMode === m ? palette.bg : palette.brass, fontFamily: "'Geist Mono', monospace", fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 150ms ease' }}>
             {m === 'bar' ? 'cocktails' : 'coffee'}
           </button>
         ))}
       </div>
 
-      {/* icon grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: '8px', marginBottom: '12px' }}>
-        {items.map((item) => (
-          <button
-            key={item.name}
-            onClick={() => selectItem(item)}
-            style={{
-              background: '#fff',
-              border: selected?.name === item.name ? `1.5px solid ${palette.brass}` : `0.5px solid ${palette.bg}11`,
-              borderRadius: '12px',
-              padding: '14px 8px 10px',
-              cursor: 'pointer',
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
-              transition: 'border-color 120ms ease',
-            }}
-          >
-            <PosIcon type={item.name} />
-            <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', color: palette.bg, letterSpacing: '0.04em', marginTop: '9px', lineHeight: 1.35, wordBreak: 'break-word', width: '100%', textAlign: 'center' }}>
-              {item.display}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* order panel */}
-      {selected && !sent && (
-        <div style={{ background: '#fff', border: `0.5px solid ${palette.bg}11`, borderRadius: '14px', padding: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
-            <div>
-              <p style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', margin: 0, color: palette.bg, fontWeight: 300 }}>{selected.display}</p>
-              <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', color: palette.brass, margin: '2px 0 0', letterSpacing: '0.08em' }}>{selected.note}</p>
-            </div>
-            <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', color: `${palette.bg}44`, fontSize: '18px', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+      {/* tablet: two-column grid + panel | phone: grid then panel below */}
+      {isTablet ? (
+        <div style={{ display: 'grid', gridTemplateColumns: selected && !sent ? '1fr 380px' : '1fr', gap: '20px', alignItems: 'start', transition: 'grid-template-columns 300ms ease' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: '8px' }}>
+            {items.map((item) => (
+              <button key={item.name} onClick={() => selectItem(item)} style={{ background: '#fff', border: selected?.name === item.name ? `1.5px solid ${palette.brass}` : `0.5px solid ${palette.bg}11`, borderRadius: '12px', padding: '14px 8px 10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', transition: 'border-color 120ms ease' }}>
+                <PosIcon type={item.name} />
+                <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', color: palette.bg, letterSpacing: '0.04em', marginTop: '9px', lineHeight: 1.35, wordBreak: 'break-word', width: '100%', textAlign: 'center' }}>{item.display}</span>
+              </button>
+            ))}
           </div>
-
-          {/* spirit picker — highball only */}
-          {isHighball && (
-            <div style={{ marginBottom: '14px' }}>
-              <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', color: palette.brass, margin: '0 0 8px' }}>spirit</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {HIGHBALL_SPIRITS.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setSpirit(s.id)}
-                    style={{
-                      padding: '7px 12px',
-                      border: `0.5px solid ${spirit === s.id ? palette.bg : `${palette.bg}22`}`,
-                      borderRadius: '8px',
-                      background: spirit === s.id ? palette.bg : 'transparent',
-                      color: spirit === s.id ? palette.cream : palette.bg,
-                      fontFamily: "'Manrope', sans-serif", fontSize: '12px',
-                      cursor: 'pointer', transition: 'all 150ms ease',
-                    }}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* strength (bar) or temp (cafe) */}
-          {selected.cat === 'bar' ? (
-            <div style={{ marginBottom: '14px' }}>
-              <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', color: palette.brass, margin: '0 0 8px' }}>strength</p>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                {pill('light', strength === 'light', () => setStrength('light'))}
-                {pill('standard', strength === 'standard', () => setStrength('standard'))}
-                {pill('strong', strength === 'strong', () => setStrength('strong'))}
-              </div>
-            </div>
-          ) : (
-            <div style={{ marginBottom: '14px' }}>
-              <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', color: palette.brass, margin: '0 0 8px' }}>temperature</p>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                {pill('hot', temp === 'hot', () => setTemp('hot'))}
-                {pill('iced', temp === 'iced', () => setTemp('iced'))}
-              </div>
-            </div>
-          )}
-
-          {/* quantity */}
-          <div style={{ marginBottom: '14px' }}>
-            <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', color: palette.brass, margin: '0 0 8px' }}>quantity</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <button onClick={() => setQty(Math.max(1, qty - 1))} disabled={qty <= 1} style={{ width: 32, height: 32, border: `0.5px solid ${palette.bg}22`, borderRadius: '8px', background: 'none', fontSize: '17px', cursor: qty <= 1 ? 'default' : 'pointer', color: palette.bg, opacity: qty <= 1 ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>−</button>
-              <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', minWidth: '22px', textAlign: 'center', color: palette.bg, fontWeight: 300 }}>{qty}</span>
-              <button onClick={() => setQty(Math.min(4, qty + 1))} disabled={qty >= 4} style={{ width: 32, height: 32, border: `0.5px solid ${palette.bg}22`, borderRadius: '8px', background: 'none', fontSize: '17px', cursor: qty >= 4 ? 'default' : 'pointer', color: palette.bg, opacity: qty >= 4 ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>+</button>
-              {qty > 1 && <span style={{ fontSize: '12px', color: `${palette.bg}55`, fontStyle: 'italic' }}>{qty} drinks</span>}
-            </div>
+          <div>
+            {orderPanel}
+            {sentBanner}
           </div>
-
-          {/* name */}
-          <div style={{ marginBottom: '12px' }}>
-            <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', color: palette.brass, margin: '0 0 8px' }}>name</p>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="guest name"
-              style={{ width: '100%', boxSizing: 'border-box', border: `0.5px solid ${palette.bg}22`, borderRadius: '8px', padding: '9px 10px', fontSize: '13px', background: '#fff', color: palette.bg, outline: 'none', fontFamily: "'Manrope', sans-serif" }}
-            />
-          </div>
-
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            style={{ width: '100%', padding: '13px', background: palette.bg, color: palette.cream, border: 'none', borderRadius: '10px', fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.22em', textTransform: 'uppercase', cursor: submitting ? 'wait' : 'pointer', opacity: submitting ? 0.7 : 1 }}
-          >
-            {submitting ? 'sending…' : 'send to queue →'}
-          </button>
         </div>
-      )}
-
-      {/* sent confirmation */}
-      {sent && (
-        <div style={{ background: '#fff', border: `0.5px solid ${palette.bg}11`, borderRadius: '14px', padding: '28px 16px', textAlign: 'center' }}>
-          <p style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 300, color: palette.bg, margin: '0 0 4px' }}>queued.</p>
-          <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', color: palette.brass, letterSpacing: '0.2em', textTransform: 'uppercase', margin: 0 }}>{selected?.display} · in the queue</p>
-        </div>
+      ) : (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: '8px', marginBottom: '12px' }}>
+            {items.map((item) => (
+              <button key={item.name} onClick={() => selectItem(item)} style={{ background: '#fff', border: selected?.name === item.name ? `1.5px solid ${palette.brass}` : `0.5px solid ${palette.bg}11`, borderRadius: '12px', padding: '14px 8px 10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', transition: 'border-color 120ms ease' }}>
+                <PosIcon type={item.name} />
+                <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', color: palette.bg, letterSpacing: '0.04em', marginTop: '9px', lineHeight: 1.35, wordBreak: 'break-word', width: '100%', textAlign: 'center' }}>{item.display}</span>
+              </button>
+            ))}
+          </div>
+          {orderPanel}
+          {sentBanner}
+        </>
       )}
     </div>
   );
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // QueueBody (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
