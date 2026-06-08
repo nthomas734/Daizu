@@ -22,6 +22,13 @@ export default function MenuPage() {
 
   const [mode, setMode] = useState<'cafe' | 'bar'>('cafe');
   const [isKiosk, setIsKiosk] = useState(false);
+  const [screenH, setScreenH] = useState(1000);
+  useEffect(() => {
+    const update = () => setScreenH(window.innerHeight);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
   const [bouncing, setBouncing] = useState(false);
   const tapCountRef = useRef(0);
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -131,8 +138,10 @@ export default function MenuPage() {
     return lang === 'en' ? ' COCKTAIL MENU ' : '    カクテル    ';
   })();
 
-  // Determine tile size based on viewport + selection state
-  const tileSize: TileSize = !isTablet ? 'sm' : selectedDrink ? 'md' : 'xl';
+  // Determine tile size based on viewport + selection state + screen height
+  // screenH >= 900: large iPad (Pro 12.9" landscape ~1024px) → xl tiles
+  // screenH < 900:  small iPad (Air/10th gen landscape ~820px) → lg tiles (fits in screen)
+  const tileSize: TileSize = !isTablet ? 'sm' : selectedDrink ? 'md' : screenH >= 900 ? 'xl' : 'lg';
 
   // On tablet, show more display tiles to fill the screen (text still pads to BOARD_WIDTH)
   const BOARD_DISPLAY_WIDTH = isTablet ? 20 : BOARD_WIDTH;
@@ -190,8 +199,8 @@ export default function MenuPage() {
       {items.map((d, i) => {
         const text = lang === 'jp' ? d.jpRowText : d.rowText;
         const isSelected = isTablet && selectedDrink === d.name;
-        const tileW = tileSize === 'xl' ? 36 : tileSize === 'md' ? 28 : 21;
-        const tileGap = tileSize === 'xl' ? 3 : tileSize === 'md' ? 3 : 2;
+        const tileW = tileSize === 'xl' ? 36 : tileSize === 'lg' ? 30 : tileSize === 'md' ? 28 : 21;
+        const tileGap = tileSize === 'md' ? 3 : tileSize === 'xl' ? 3 : tileSize === 'lg' ? 3 : 2;
         return (
           <button
             key={d.name}
@@ -372,6 +381,7 @@ export default function MenuPage() {
         padding: '40px 60px 60px',
         display: 'flex',
         flexDirection: 'column',
+        alignItems: 'center',
         gap: '32px',
         transition: 'background 600ms ease',
         position: 'relative',
@@ -379,6 +389,8 @@ export default function MenuPage() {
         boxSizing: 'border-box',
       }}
     >
+      {/* Constrain header + board to same width so → CAFE button aligns with board edge */}
+      <div style={{ width: '100%', maxWidth: selectedDrink ? '1200px' : 'fit-content', minWidth: selectedDrink ? '800px' : undefined }}>
       {header}
 
       <div
@@ -414,6 +426,8 @@ export default function MenuPage() {
             onDismiss={() => setSelectedDrink(null)}
           />
         )}
+      </div>
+
       </div>
 
       <p
