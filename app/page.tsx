@@ -48,10 +48,9 @@ export default function MenuPage() {
   // On mount, read ?mode=bar from the URL or /bar pathname to initialize bar/kiosk mode
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('mode') === 'bar' || window.location.pathname.startsWith('/bar')) {
-      setMode('bar');
-      setIsKiosk(true);
-    }
+    const isBarRoute = window.location.pathname.startsWith('/bar');
+    if (params.get('mode') === 'bar' || isBarRoute) setMode('bar');
+    if (isBarRoute) setIsKiosk(true);
   }, []);
   const [lang, setLang] = useState<'jp' | 'en'>('jp');
   const [outOfStock, setOutOfStock] = useState<{ drinks: string[] }>({ drinks: [] });
