@@ -14,6 +14,7 @@ export const DRINKS = [
 export const SYRUPS = [
   { id: 'vanilla',    label: 'vanilla' },
   { id: 'honey',      label: 'honey' },
+  { id: 'raspberry',  label: 'raspberry',  seasonal: true },
   { id: 'strawberry', label: 'strawberry', seasonal: true },
 ] as const;
 
