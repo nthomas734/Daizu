@@ -49,6 +49,26 @@ const CAFE_ITEMS: PosItem[] = [
   { name: 'LATTE',      display: 'latte',      note: 'espresso · milk',      cat: 'cafe' },
 ];
 
+// Per-drink accent colors — kura category palette
+const DRINK_COLORS: Record<string, string> = {
+  'OLD FASHIONED':  '#D4A657', // ochre — bourbon
+  'GIN & TONIC':    '#8AA4C2', // dusty blue — crisp
+  'DAIQUIRI':       '#7B9F8C', // sage — lime
+  'ESPRESSO TINI':  '#B85C5C', // muted red — espresso
+  'GOLD COAST':     '#C8A97E', // brass — the house special
+  'GARDEN MULE':    '#9B7EC8', // violet — hibiscus
+  'NEGRONI':        '#C77B5C', // terracotta — Campari
+  'HOUSE HIGHBALL': '#A88BB0', // mauve — versatile
+  'ESPRESSO':       '#8B6553', // warm brown
+  'LONG BLACK':     '#6B7E8A', // slate
+  'AMERICANO':      '#7A8E6B', // muted green
+  'CORTADO':        '#B8956A', // warm tan
+  'FLAT WHITE':     '#8A9E8A', // soft sage
+  'CAPPUCCINO':     '#9E8ABE', // muted purple
+  'LATTE':          '#B89E7A', // latte
+};
+const getDrinkColor = (drink: string) => DRINK_COLORS[drink] ?? '#C8A97E';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // POS icon component — brass-line SVG illustrations per drink
 // ─────────────────────────────────────────────────────────────────────────────
@@ -548,31 +568,56 @@ function QueueBody({ active, palette, onPick, onDelete, onClearAll }: {
         <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.2em', color: palette.surface, opacity: 0.6, textTransform: 'uppercase', margin: 0 }}>swipe ← to delete</p>
         <button onClick={onClearAll} style={{ background: 'transparent', border: `1px solid ${palette.accent}66`, color: palette.accent, fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.15em', padding: '5px 10px', borderRadius: '2px', textTransform: 'uppercase', cursor: 'pointer' }}>clear all</button>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {active.map((order) => (
           <SwipeRow key={order.id} onDelete={() => onDelete(order.id)} palette={palette}>
-            <button onClick={() => onPick(order.id)} style={{ width: '100%', background: '#fff', border: `1px solid ${palette.bg}22`, borderLeft: `4px solid ${order.status === 'received' ? palette.accent : palette.brass}`, borderRadius: '2px', padding: '14px 16px', cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <p style={{ margin: 0, fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 300, color: palette.bg }}>
-                  {order.drink.toLowerCase()}
-                  {order.category === 'bar' && order.quantity && order.quantity > 1 && (
-                    <span style={{ color: palette.accent, marginLeft: '8px', fontSize: '18px' }}>×{order.quantity}</span>
-                  )}
-                </p>
-                <p style={{ margin: '2px 0 0', fontSize: '12px', color: palette.surface, opacity: 0.7 }}>
-                  <span style={{ fontWeight: 600, color: palette.bg }}>{order.customer} · </span>
-                  {order.category === 'bar' ? (
-                    <>{order.strength || 'standard'}{order.spirit && ` · ${order.spirit}`}</>
-                  ) : (
-                    <>{order.temp}{order.milk && ` · ${order.milk}`}{order.syrups?.length > 0 && ` · ${order.syrups.join(', ')}`}</>
-                  )}
-                </p>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ background: order.status === 'received' ? palette.accent : palette.brass, color: '#fff', fontFamily: "'Geist Mono', monospace", fontSize: '9px', padding: '3px 8px', letterSpacing: '0.15em', textTransform: 'uppercase', borderRadius: '2px' }}>
-                  {order.status === 'received' ? '● new' : order.status}
-                </span>
-                <p style={{ margin: '4px 0 0', fontSize: '10px', color: palette.surface, opacity: 0.6, fontFamily: "'Geist Mono', monospace" }}>{timeAgo(order.created_at)}</p>
+            <button
+              onClick={() => onPick(order.id)}
+              style={{
+                width: '100%', background: '#fff',
+                border: `0.5px solid ${palette.bg}11`,
+                borderRadius: '16px', padding: 0,
+                cursor: 'pointer', textAlign: 'left',
+                display: 'flex', overflow: 'hidden',
+              }}
+            >
+              {/* drink-color accent bar */}
+              <div style={{ width: '6px', flexShrink: 0, background: getDrinkColor(order.drink) }} />
+              {/* card content */}
+              <div style={{ flex: 1, padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <p style={{ margin: 0, fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 300, color: palette.bg, lineHeight: 1.1 }}>
+                    {order.drink.toLowerCase()}
+                    {order.category === 'bar' && order.quantity && order.quantity > 1 && (
+                      <span style={{ color: getDrinkColor(order.drink), marginLeft: '8px', fontSize: '20px', opacity: 0.9 }}>×{order.quantity}</span>
+                    )}
+                  </p>
+                  <p style={{ margin: '5px 0 0', fontSize: '12px', color: palette.bg, opacity: 0.5, letterSpacing: '0.01em' }}>
+                    <span style={{ fontWeight: 600, opacity: 0.8 }}>{order.customer}</span>
+                    {' · '}
+                    {order.category === 'bar' ? (
+                      <>{order.strength || 'standard'}{order.spirit && ` · ${order.spirit}`}</>
+                    ) : (
+                      <>{order.temp}{order.milk && ` · ${order.milk}`}{order.syrups?.length > 0 && ` · ${order.syrups.join(', ')}`}</>
+                    )}
+                  </p>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}>
+                  <span style={{
+                    background: order.status === 'received' ? `${getDrinkColor(order.drink)}22` : `${palette.brass}22`,
+                    color: order.status === 'received' ? getDrinkColor(order.drink) : palette.brass,
+                    fontFamily: "'Geist Mono', monospace",
+                    fontSize: '9px', padding: '4px 10px',
+                    letterSpacing: '0.12em', textTransform: 'uppercase',
+                    borderRadius: '20px', fontWeight: 600,
+                    display: 'inline-block',
+                  }}>
+                    {order.status === 'received' ? '● new' : order.status}
+                  </span>
+                  <p style={{ margin: '5px 0 0', fontSize: '10px', color: palette.bg, opacity: 0.4, fontFamily: "'Geist Mono', monospace" }}>
+                    {timeAgo(order.created_at)}
+                  </p>
+                </div>
               </div>
             </button>
           </SwipeRow>
