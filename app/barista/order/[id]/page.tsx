@@ -177,10 +177,10 @@ export default function BaristaOrderPage({
             color: palette.cream,
             fontFamily: "'Geist Mono', monospace",
             fontSize: '9px',
-            padding: '3px 8px',
-            letterSpacing: '0.15em',
+            padding: '4px 10px',
+            letterSpacing: '0.12em',
             textTransform: 'uppercase',
-            borderRadius: '2px',
+            borderRadius: '20px',
           }}
         >
           ● {order.status === 'brewing' && isCocktail ? 'mixing' : order.status}
@@ -253,10 +253,10 @@ export default function BaristaOrderPage({
             <div
               style={{
                 marginTop: '14px',
-                padding: '12px 14px',
+                padding: '14px 16px',
                 background: palette.bg,
                 color: palette.cream,
-                borderRadius: '2px',
+                borderRadius: '14px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '14px',
@@ -306,13 +306,13 @@ export default function BaristaOrderPage({
             <div
               style={{
                 marginTop: '14px',
-                padding: '10px 12px',
-                background: palette.bg,
-                color: palette.cream,
-                borderRadius: '2px',
+                padding: '12px 16px',
+                background: `${palette.bg}0D`,
+                color: palette.bg,
+                borderRadius: '12px',
+                border: `0.5px solid ${palette.bg}22`,
                 fontSize: '13px',
                 fontStyle: 'italic',
-                borderLeft: `3px solid ${palette.brass}`,
               }}
             >
               &quot;{order.notes}&quot;
@@ -324,10 +324,10 @@ export default function BaristaOrderPage({
           <div
             style={{
               marginBottom: '16px',
-              padding: '10px 14px',
+              padding: '12px 16px',
               background: palette.accent,
               color: palette.cream,
-              borderRadius: '2px',
+              borderRadius: '12px',
               fontFamily: "'Geist Mono', monospace",
               fontSize: '12px',
               letterSpacing: '0.1em',
@@ -346,7 +346,7 @@ export default function BaristaOrderPage({
               <li
                 key={i}
                 style={{
-                  padding: '10px 0',
+                  padding: '13px 0',
                   borderBottom:
                     i < fullIngredients.length - 1 ? `1px solid ${palette.bg}11` : 'none',
                   fontFamily: "'Manrope', sans-serif",
@@ -407,8 +407,8 @@ export default function BaristaOrderPage({
                 <div
                   style={{
                     flexShrink: 0,
-                    width: '26px',
-                    height: '26px',
+                    width: '28px',
+                    height: '28px',
                     borderRadius: '50%',
                     background: palette.bg,
                     color: palette.cream,
@@ -445,7 +445,7 @@ export default function BaristaOrderPage({
               letterSpacing: '0.25em',
               fontWeight: 600,
               textTransform: 'uppercase',
-              borderRadius: '2px',
+              borderRadius: '12px',
               cursor: 'pointer',
             }}
           >
@@ -467,7 +467,7 @@ export default function BaristaOrderPage({
               letterSpacing: '0.25em',
               fontWeight: 600,
               textTransform: 'uppercase',
-              borderRadius: '2px',
+              borderRadius: '12px',
               cursor: 'pointer',
             }}
           >
@@ -659,14 +659,15 @@ function Tag({
   return (
     <span
       style={{
-        background: emphasis ? palette.accent : palette.bg,
-        color: palette.cream,
+        background: emphasis ? palette.accent : `${palette.bg}18`,
+        color: emphasis ? palette.cream : palette.bg,
         fontFamily: "'Geist Mono', monospace",
         fontSize: '10px',
-        padding: '4px 10px',
+        padding: '5px 12px',
         letterSpacing: '0.1em',
         textTransform: 'uppercase',
-        borderRadius: '2px',
+        borderRadius: '20px',
+        border: emphasis ? 'none' : `0.5px solid ${palette.bg}33`,
       }}
     >
       {children}

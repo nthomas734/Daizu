@@ -32,7 +32,7 @@ export default function MenuPage() {
     if (tapCountRef.current >= 3) {
       tapCountRef.current = 0;
       setBouncing(true);
-      setTimeout(() => setBouncing(false), 600);
+      setTimeout(() => setBouncing(false), 2200);
     } else {
       tapTimer.current = setTimeout(() => { tapCountRef.current = 0; }, 700);
     }
@@ -260,15 +260,16 @@ export default function MenuPage() {
           onClick={handleBeanTap}
           style={{
             cursor: 'pointer',
-            animation: bouncing ? 'beanBounce 500ms ease both' : 'none',
+            animation: bouncing ? 'beanBounce 2200ms ease both' : 'none',
             display: 'inline-flex',
             WebkitUserSelect: 'none',
             userSelect: 'none',
+            WebkitTapHighlightColor: 'transparent',
           }}
         >
           <Logo size={isTablet ? 48 : 42} color={palette.brass} stroke={6} />
         </div>
-        <style>{`@keyframes beanBounce{0%{transform:translateY(0)}20%{transform:translateY(-12px)}40%{transform:translateY(0)}60%{transform:translateY(-6px)}80%{transform:translateY(0)}100%{transform:translateY(0)}}`}</style>
+        <style>{`@keyframes beanBounce{0%{transform:translateY(0)}10%{transform:translateY(-14px)}20%{transform:translateY(0)}30%{transform:translateY(-9px)}40%{transform:translateY(0)}50%{transform:translateY(-5px)}60%{transform:translateY(0)}70%{transform:translateY(-2.5px)}80%{transform:translateY(0)}90%{transform:translateY(-1px)}100%{transform:translateY(0)}}`}</style>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
           <h1
             style={{
