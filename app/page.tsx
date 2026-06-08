@@ -107,7 +107,7 @@ export default function MenuPage() {
     return name + ' ' + '·'.repeat(space - 2) + ' ' + price;
   };
 
-  const formatBarRow = (name: string) => name.padEnd(BOARD_WIDTH, ' ').slice(0, BOARD_WIDTH);
+  const formatBarRow = (name: string) => (' ' + name).padEnd(BOARD_WIDTH, ' ').slice(0, BOARD_WIDTH);
 
   type MenuItem = {
     name: string;
