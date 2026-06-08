@@ -143,6 +143,7 @@ export default function MenuPage() {
         boxShadow: 'inset 0 0 30px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4)',
         display: 'flex',
         flexDirection: 'column',
+        width: isTablet ? 'fit-content' : undefined,
         gap: isTablet && !selectedDrink ? '8px' : '6px',
       }}
     >
@@ -364,7 +365,7 @@ export default function MenuPage() {
             transition: 'transform 350ms cubic-bezier(0.4, 0.0, 0.2, 1)',
           }}
         >
-          <div style={{ width: '100%', maxWidth: selectedDrink ? '600px' : '720px' }}>{board}</div>
+          <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>{board}</div>
         </div>
 
         {selectedDrink && (
