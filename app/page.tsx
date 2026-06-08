@@ -22,6 +22,21 @@ export default function MenuPage() {
 
   const [mode, setMode] = useState<'cafe' | 'bar'>('cafe');
   const [isKiosk, setIsKiosk] = useState(false);
+  const [bouncing, setBouncing] = useState(false);
+  const tapCountRef = useRef(0);
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleBeanTap = () => {
+    tapCountRef.current += 1;
+    if (tapTimer.current) clearTimeout(tapTimer.current);
+    if (tapCountRef.current >= 3) {
+      tapCountRef.current = 0;
+      setBouncing(true);
+      setTimeout(() => setBouncing(false), 600);
+    } else {
+      tapTimer.current = setTimeout(() => { tapCountRef.current = 0; }, 700);
+    }
+  };
 
   // On mount, read ?mode=bar from the URL or /bar pathname to initialize bar/kiosk mode
   useEffect(() => {
@@ -241,7 +256,19 @@ export default function MenuPage() {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Logo size={isTablet ? 48 : 42} color={palette.brass} stroke={6} />
+        <div
+          onClick={handleBeanTap}
+          style={{
+            cursor: 'pointer',
+            animation: bouncing ? 'beanBounce 500ms ease both' : 'none',
+            display: 'inline-flex',
+            WebkitUserSelect: 'none',
+            userSelect: 'none',
+          }}
+        >
+          <Logo size={isTablet ? 48 : 42} color={palette.brass} stroke={6} />
+        </div>
+        <style>{`@keyframes beanBounce{0%{transform:translateY(0)}20%{transform:translateY(-12px)}40%{transform:translateY(0)}60%{transform:translateY(-6px)}80%{transform:translateY(0)}100%{transform:translateY(0)}}`}</style>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
           <h1
             style={{

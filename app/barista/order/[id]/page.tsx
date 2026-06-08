@@ -4,6 +4,7 @@ import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/Logo';
 import { GlassIcon } from '@/components/GlassIcon';
+import { useViewport } from '@/lib/useViewport';
 import {
   COCKTAIL_RECIPES,
   COCKTAILS,
@@ -22,6 +23,8 @@ export default function BaristaOrderPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const viewport = useViewport();
+  const isTablet = viewport === 'tablet';
   const [order, setOrder] = useState<Order | null>(null);
   const [readyPhrase, setReadyPhrase] = useState<{ jp: string; en: string } | null>(null);
 
@@ -132,7 +135,7 @@ export default function BaristaOrderPage({
         minHeight: '100vh',
         paddingBottom: '40px',
         fontFamily: "'Manrope', sans-serif",
-        maxWidth: '480px',
+        maxWidth: isTablet ? '900px' : '480px',
         margin: '0 auto',
       }}
     >
