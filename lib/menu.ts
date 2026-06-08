@@ -181,7 +181,7 @@ export const COCKTAILS = [
   { name: 'OLD FASHIONED',  display: 'OLD FASHIONED',  jp: 'オールドファッション',  note: 'bourbon · bitters · sugar',          glass: 'rocks'    as GlassType },
   { name: 'GIN & TONIC',    display: 'GIN & TONIC',    jp: 'ジントニック',          note: 'gin · tonic · lime',                 glass: 'highball' as GlassType },
   { name: 'DAIQUIRI',       display: 'DAIQUIRI',       jp: 'ダイキリ',              note: 'rum · lime · demerara',              glass: 'coupe'    as GlassType },
-  { name: 'ESPRESSO TINI',  display: 'ESPRESSO TINI',  jp: 'エスプレッソティーニ',  note: 'vodka · espresso · kahlua',          glass: 'coupe'    as GlassType },
+  { name: 'ESPRESSO TINI',  display: 'ESPRESSO TINI',  jp: 'エスプレッソティーニ',  note: 'vodka · espresso · mr black',          glass: 'coupe'    as GlassType },
   { name: 'GOLD COAST',     display: 'GOLD COAST',     jp: 'ゴールドコースト',      note: 'bourbon · honey · lemon · IPA',      glass: 'coupe'    as GlassType },
   { name: 'GARDEN MULE',    display: 'GARDEN MULE',    jp: 'ガーデンミュール',      note: 'gin · hibiscus · ginger · berries',  glass: 'highball' as GlassType },
   { name: 'NEGRONI',        display: 'NEGRONI',        jp: 'ネグローニ',            note: 'gin · campari · sweet vermouth',     glass: 'rocks'    as GlassType },
@@ -285,8 +285,8 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
     garnish: '3 coffee beans floated on foam',
     ingredients: [
       '2 oz Tito\'s vodka',
-      '1 oz fresh espresso (single shot, 9g in / ~1 oz out)',
-      '½ oz Kahlua',
+      '1 oz fresh espresso',
+      '½ oz Mr Black coffee liqueur',
       '¼ oz simple syrup',
     ],
     steps: [
