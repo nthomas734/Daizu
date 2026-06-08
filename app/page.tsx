@@ -133,18 +133,24 @@ export default function MenuPage() {
           jpRowText: c.jp.padEnd(BOARD_WIDTH, ' ').slice(0, BOARD_WIDTH),
         }));
 
-  const headerText = (() => {
-    if (mode === 'cafe') return lang === 'en' ? '     MENU     ' : '    メニュー   ';
-    return lang === 'en' ? ' COCKTAIL MENU ' : '    カクテル    ';
-  })();
-
   // Determine tile size based on viewport + selection state + screen height
-  // screenH >= 900: large iPad (Pro 12.9" landscape ~1024px) → xl tiles
-  // screenH < 900:  small iPad (Air/10th gen landscape ~820px) → lg tiles (fits in screen)
   const tileSize: TileSize = !isTablet ? 'sm' : selectedDrink ? 'md' : screenH >= 900 ? 'xl' : 'lg';
 
   // On tablet, show more display tiles to fill the screen (text still pads to BOARD_WIDTH)
   const BOARD_DISPLAY_WIDTH = isTablet ? 20 : BOARD_WIDTH;
+
+  // Center a label within a fixed tile width (used for header + footer rows)
+  const centerRow = (text: string, width: number) => {
+    const t = text.trim();
+    const total = Math.max(0, width - t.length);
+    const left = Math.floor(total / 2);
+    return ' '.repeat(left) + t + ' '.repeat(total - left);
+  };
+
+  const headerText = (() => {
+    if (mode === 'cafe') return centerRow(lang === 'en' ? 'MENU' : 'メニュー', BOARD_DISPLAY_WIDTH);
+    return centerRow(lang === 'en' ? 'COCKTAIL MENU' : 'カクテル', BOARD_DISPLAY_WIDTH);
+  })();
 
   // Click handler: phone navigates immediately; tablet sets selection
   const handleDrinkTap = (drinkName: string) => {
@@ -173,7 +179,7 @@ export default function MenuPage() {
         display: 'flex',
         flexDirection: 'column',
         width: isTablet ? 'fit-content' : undefined,
-        gap: isTablet && !selectedDrink ? '8px' : '6px',
+        gap: isTablet && !selectedDrink ? (tileSize === 'lg' ? '5px' : '8px') : '6px',
       }}
     >
       <div
@@ -244,7 +250,7 @@ export default function MenuPage() {
         }}
       >
         <FlapRow
-          text={lang === 'en' ? ' TAP TO ORDER ' : '  ご注文どうぞ  '}
+          text={centerRow(lang === 'en' ? 'TAP TO ORDER' : 'ご注文どうぞ', BOARD_DISPLAY_WIDTH)}
           width={BOARD_DISPLAY_WIDTH}
           startDelay={1100}
           palette={palette}
