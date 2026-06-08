@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { COLORS, Order } from '@/lib/menu';
 import { FlapRow } from '@/components/SplitFlap';
@@ -61,6 +61,22 @@ export default function ConfirmPage({
     router.push(backUrl);
   };
 
+  // Long-press the board (350ms) to jump straight to the barista hub
+  const [boardPressing, setBoardPressing] = useState(false);
+  const boardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startBoardPress = () => {
+    setBoardPressing(true);
+    boardTimer.current = setTimeout(() => {
+      setBoardPressing(false);
+      router.push('/barista');
+    }, 350);
+  };
+  const cancelBoardPress = () => {
+    if (boardTimer.current) clearTimeout(boardTimer.current);
+    boardTimer.current = null;
+    setBoardPressing(false);
+  };
+
   if (!order) {
     return (
       <div style={{ ...wrap, background: palette.bg, color: palette.cream }}>
@@ -98,12 +114,23 @@ export default function ConfirmPage({
       }}
     >
       <div
+        onPointerDown={startBoardPress}
+        onPointerUp={cancelBoardPress}
+        onPointerLeave={cancelBoardPress}
+        onPointerCancel={cancelBoardPress}
         style={{
           background: palette.board,
           padding: '20px 16px',
           borderRadius: '6px',
           border: `1px solid ${palette.brass}33`,
           boxShadow: 'inset 0 0 30px rgba(0,0,0,0.6)',
+          opacity: boardPressing ? 0.7 : 1,
+          transition: 'opacity 150ms ease',
+          cursor: 'default',
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
+          WebkitTouchCallout: 'none',
+          touchAction: 'manipulation',
         }}
       >
         <FlapRow
