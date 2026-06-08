@@ -9,12 +9,13 @@ type Palette = {
   tileText: string;
 };
 
-export type TileSize = 'sm' | 'md' | 'lg';
+export type TileSize = 'sm' | 'md' | 'lg' | 'xl';
 
 const TILE_DIMS: Record<TileSize, { w: number; h: number; fs: number; jpFs: number; gap: number }> = {
-  sm: { w: 21, h: 30, fs: 19, jpFs: 15, gap: 2 }, // phone (current)
-  md: { w: 28, h: 40, fs: 24, jpFs: 19, gap: 3 }, // tablet idle (centered big board)
-  lg: { w: 24, h: 34, fs: 21, jpFs: 17, gap: 2 }, // tablet selected (board compressed in 2-col)
+  sm: { w: 21, h: 30, fs: 19, jpFs: 15, gap: 2 }, // phone
+  md: { w: 28, h: 40, fs: 24, jpFs: 19, gap: 3 }, // tablet two-col selected (compressed board)
+  lg: { w: 24, h: 34, fs: 21, jpFs: 17, gap: 2 }, // tablet two-col idle (legacy)
+  xl: { w: 36, h: 50, fs: 31, jpFs: 24, gap: 3 }, // tablet full-board idle
 };
 
 export function FlapTile({

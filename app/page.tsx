@@ -132,7 +132,10 @@ export default function MenuPage() {
   })();
 
   // Determine tile size based on viewport + selection state
-  const tileSize: TileSize = !isTablet ? 'sm' : selectedDrink ? 'lg' : 'md';
+  const tileSize: TileSize = !isTablet ? 'sm' : selectedDrink ? 'md' : 'xl';
+
+  // On tablet, show more display tiles to fill the screen (text still pads to BOARD_WIDTH)
+  const BOARD_DISPLAY_WIDTH = isTablet ? 20 : BOARD_WIDTH;
 
   // Click handler: phone navigates immediately; tablet sets selection
   const handleDrinkTap = (drinkName: string) => {
@@ -175,7 +178,7 @@ export default function MenuPage() {
       >
         <FlapRow
           text={headerText}
-          width={BOARD_WIDTH}
+          width={BOARD_DISPLAY_WIDTH}
           startDelay={0}
           palette={palette}
           jp={lang === 'jp'}
@@ -187,8 +190,8 @@ export default function MenuPage() {
       {items.map((d, i) => {
         const text = lang === 'jp' ? d.jpRowText : d.rowText;
         const isSelected = isTablet && selectedDrink === d.name;
-        const tileW = tileSize === 'md' ? 28 : tileSize === 'lg' ? 24 : 21;
-        const tileGap = tileSize === 'md' ? 3 : 2;
+        const tileW = tileSize === 'xl' ? 36 : tileSize === 'md' ? 28 : 21;
+        const tileGap = tileSize === 'xl' ? 3 : tileSize === 'md' ? 3 : 2;
         return (
           <button
             key={d.name}
@@ -210,7 +213,7 @@ export default function MenuPage() {
           >
             <FlapRow
               text={text}
-              width={BOARD_WIDTH}
+              width={BOARD_DISPLAY_WIDTH}
               startDelay={300 + i * 80}
               palette={palette}
               jp={lang === 'jp'}
@@ -233,7 +236,7 @@ export default function MenuPage() {
       >
         <FlapRow
           text={lang === 'en' ? ' TAP TO ORDER ' : '  ご注文どうぞ  '}
-          width={BOARD_WIDTH}
+          width={BOARD_DISPLAY_WIDTH}
           startDelay={1100}
           palette={palette}
           jp={lang === 'jp'}
