@@ -54,7 +54,7 @@ export default function CustomizePage({
   // Bar-only state
   const [strength, setStrength] = useState<'light' | 'standard' | 'strong'>('standard');
   const [quantity, setQuantity] = useState(1);
-  const [spirit, setSpirit] = useState<string>(isHighball ? 'bourbon' : '');
+  const [spirit, setSpirit] = useState<string>(isHighball ? HIGHBALL_SPIRITS[0].id : '');
 
   // Shared
   const [notes, setNotes] = useState('');
@@ -207,7 +207,7 @@ export default function CustomizePage({
                 padding: '12px 14px',
                 background: 'transparent',
                 border: `1px dashed ${palette.brass}66`,
-                borderRadius: '2px',
+                borderRadius: '14px',
                 color: palette.cream,
                 fontFamily: "'Manrope', sans-serif",
                 fontSize: '13px',
@@ -253,12 +253,8 @@ export default function CustomizePage({
             width: '100%',
             background: 'transparent',
             border: `1px solid ${palette.brass}55`,
-            borderRadius: '2px',
-            padding: '10px 12px',
-            color: palette.cream,
-            fontFamily: "'Manrope', sans-serif",
-            fontSize: '14px',
-            boxSizing: 'border-box',
+            borderRadius: '10px',
+            padding: '10px 14px',
           }}
         />
       </Section>
@@ -403,7 +399,7 @@ export default function CustomizePage({
                   height: '40px',
                   background: 'transparent',
                   border: `1px solid ${palette.brass}66`,
-                  borderRadius: '2px',
+                  borderRadius: '10px',
                   color: palette.cream,
                   fontSize: '20px',
                   fontFamily: "'Geist Mono', monospace",
@@ -433,7 +429,7 @@ export default function CustomizePage({
                   height: '40px',
                   background: 'transparent',
                   border: `1px solid ${palette.brass}66`,
-                  borderRadius: '2px',
+                  borderRadius: '10px',
                   color: palette.cream,
                   fontSize: '20px',
                   fontFamily: "'Geist Mono', monospace",
@@ -470,8 +466,8 @@ export default function CustomizePage({
             minHeight: '60px',
             background: 'transparent',
             border: `1px solid ${palette.brass}55`,
-            borderRadius: '2px',
-            padding: '10px 12px',
+            borderRadius: '10px',
+            padding: '10px 14px',
             color: palette.cream,
             fontFamily: "'Manrope', sans-serif",
             fontSize: '13px',
@@ -489,7 +485,7 @@ export default function CustomizePage({
           marginBottom: '16px',
           background: saveAsFav ? palette.brass + '22' : 'transparent',
           border: `1px dashed ${palette.brass}77`,
-          borderRadius: '2px',
+          borderRadius: '12px',
           color: palette.cream,
           fontFamily: "'Manrope', sans-serif",
           fontSize: '13px',
@@ -504,8 +500,7 @@ export default function CustomizePage({
           style={{
             width: '18px',
             height: '18px',
-            borderRadius: '2px',
-            border: `1px solid ${palette.brass}`,
+            borderRadius: '6px',
             background: saveAsFav ? palette.brass : 'transparent',
             display: 'flex',
             alignItems: 'center',
@@ -540,7 +535,7 @@ export default function CustomizePage({
           letterSpacing: '0.25em',
           fontWeight: 600,
           textTransform: 'uppercase',
-          borderRadius: '2px',
+          borderRadius: '14px',
           boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
           cursor: submitting ? 'wait' : 'pointer',
           opacity: submitting ? 0.7 : 1,
@@ -591,8 +586,7 @@ function Pill({
         padding: '8px 14px',
         fontFamily: "'Manrope', sans-serif",
         fontSize: '13px',
-        borderRadius: '2px',
-        textTransform: 'lowercase',
+        borderRadius: '20px',
         letterSpacing: '0.02em',
         cursor: 'pointer',
         transition: 'all 200ms ease',
