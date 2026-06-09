@@ -621,7 +621,7 @@ function PreviewPane({
                     opacity: 0.9,
                   }}
                 >
-                  · {ing.replace(/^[\d¼½¾⅓⅔⅛]+[-–\s\d¼½¾⅓⅔⅛]*\s*(oz|ml|tsp|tbsp|dash|dashes|drop|drops)?\s*/i, '').trim()}
+                  · {ing.replace(/^[\d¼½¾⅓⅔⅛]+[-–\s\d¼½¾⅓⅔⅛]*\s*(oz|ml|tsp|tbsp|dashes|dash|drops|drop)?\s*/i, '').trim()}
                 </li>
               ))}
             </ul>
@@ -648,7 +648,7 @@ function PreviewPane({
             {coffeeRecipe.base.map((ing, i) => {
               const label = /^double shot/i.test(ing)
                 ? 'espresso'
-                : ing.replace(/^[\d¼½¾⅓⅔⅛]+[-–\s\d¼½¾⅓⅔⅛]*\s*(oz|ml|tsp|tbsp|dash|dashes|drop|drops)?\s*/i, '').trim();
+                : ing.replace(/^[\d¼½¾⅓⅔⅛]+[-–\s\d¼½¾⅓⅔⅛]*\s*(oz|ml|tsp|tbsp|dashes|dash|drops|drop)?\s*/i, '').trim();
               return (
                 <li
                   key={i}
