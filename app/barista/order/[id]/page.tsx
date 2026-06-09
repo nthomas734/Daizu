@@ -234,16 +234,7 @@ export default function BaristaOrderPage({
         width: '100%',
       }}
     >
-    <div
-      style={{
-        minHeight: '100vh',
-        paddingBottom: '40px',
-        fontFamily: "'Manrope', sans-serif",
-        maxWidth: isLargeTablet ? '1300px' : isTablet ? '900px' : '480px',
-        margin: '0 auto',
-      }}
-    >
-      {/* ── header ────────────────────────────────────────────────────────── */}
+      {/* ── header — full viewport width ──────────────────────────────────── */}
       <div
         style={{
           background: palette.bg,
@@ -292,7 +283,15 @@ export default function BaristaOrderPage({
         </span>
       </div>
 
-      {/* ── content ───────────────────────────────────────────────────────── */}
+    <div
+      style={{
+        minHeight: '100vh',
+        paddingBottom: '40px',
+        fontFamily: "'Manrope', sans-serif",
+        maxWidth: isLargeTablet ? '1300px' : isTablet ? '900px' : '480px',
+        margin: '0 auto',
+      }}
+    >
       {isLargeTablet ? (
         /* two-column layout for large iPad */
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', padding: '28px 32px' }}>
