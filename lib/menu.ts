@@ -182,7 +182,7 @@ export const COCKTAILS = [
   { name: 'GIN & TONIC',    display: 'GIN & TONIC',    jp: 'ジントニック',          note: 'gin · tonic · lime',                 glass: 'highball' as GlassType },
   { name: 'DAIQUIRI',       display: 'DAIQUIRI',       jp: 'ダイキリ',              note: 'rum · lime · demerara',              glass: 'coupe'    as GlassType },
   { name: 'ESPRESSO TINI',  display: 'ESPRESSO TINI',  jp: 'エスプレッソティーニ',  note: 'vodka · espresso · mr black',          glass: 'coupe'    as GlassType },
-  { name: 'GOLD COAST',     display: 'GOLD COAST',     jp: 'ゴールドコースト',      note: 'bourbon · honey · lemon · IPA',      glass: 'coupe'    as GlassType },
+  { name: 'GOLD COAST',     display: 'GOLD COAST',     jp: 'ゴールドコースト',      note: 'rye · honey · lemon · IPA',      glass: 'coupe'    as GlassType },
   { name: 'GARDEN MULE',    display: 'GARDEN MULE',    jp: 'ガーデンミュール',      note: 'gin · hibiscus · ginger · berries',  glass: 'highball' as GlassType },
   { name: 'NEGRONI',        display: 'NEGRONI',        jp: 'ネグローニ',            note: 'gin · campari · sweet vermouth',     glass: 'rocks'    as GlassType },
   { name: 'HOUSE HIGHBALL', display: 'HOUSE HIGHBALL', jp: 'ハウスハイボール',      note: 'your spirit · soda · citrus',        glass: 'highball' as GlassType },
@@ -242,7 +242,7 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
     ],
     steps: [
       'Add sugar, bitters, splash of water to glass; stir to dissolve',
-      'Add bourbon and one large ice cube',
+      'Add Rittenhouse rye and one large ice cube',
       'Stir 30 seconds to chill and dilute',
       'Express orange peel over surface, drop in',
     ],
@@ -308,7 +308,7 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
       '½ oz hazy IPA (float)',
     ],
     steps: [
-      'Combine bourbon, honey syrup, lemon in shaker with ice',
+      'Combine Rittenhouse rye, honey syrup, lemon in shaker with ice',
       'Shake hard, 12 seconds',
       'Double-strain into chilled coupe',
       'Gently pour IPA over the back of a bar spoon for the float',
@@ -353,7 +353,7 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
   'HOUSE HIGHBALL': {
     glass: 'highball',
     glassLabel: 'highball, lots of ice',
-    garnish: 'citrus to match (lemon for bourbon/gin, lime for vodka/rum)',
+    garnish: 'citrus to match (lemon for rye/gin, lime for vodka/rum)',
     ingredients: [
       '2 oz spirit (your choice)',
       '4 oz soda water (or topo chico)',
