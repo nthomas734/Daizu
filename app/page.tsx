@@ -621,7 +621,7 @@ function PreviewPane({
                     opacity: 0.9,
                   }}
                 >
-                  · {ing}
+                  · {ing.replace(/^[\d¼½¾⅓⅔⅛]+[-–\s\d¼½¾⅓⅔⅛]*\s*(oz|ml|tsp|tbsp|dash|dashes|drop|drops)?\s*/i, '').trim()}
                 </li>
               ))}
             </ul>
@@ -645,19 +645,24 @@ function PreviewPane({
             ratio · {coffeeRecipe.ratio}
           </p>
           <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-            {coffeeRecipe.base.map((ing, i) => (
-              <li
-                key={i}
-                style={{
-                  fontSize: '13px',
-                  color: palette.cream,
-                  padding: '4px 0',
-                  opacity: 0.9,
-                }}
-              >
-                · {ing}
-              </li>
-            ))}
+            {coffeeRecipe.base.map((ing, i) => {
+              const label = /^double shot/i.test(ing)
+                ? 'espresso'
+                : ing.replace(/^[\d¼½¾⅓⅔⅛]+[-–\s\d¼½¾⅓⅔⅛]*\s*(oz|ml|tsp|tbsp|dash|dashes|drop|drops)?\s*/i, '').trim();
+              return (
+                <li
+                  key={i}
+                  style={{
+                    fontSize: '13px',
+                    color: palette.cream,
+                    padding: '4px 0',
+                    opacity: 0.9,
+                  }}
+                >
+                  · {label}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
