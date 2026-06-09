@@ -167,11 +167,11 @@ function PosIcon({ type }: { type: string }) {
     </g>,
 
     'CORTADO': <g>
-      <path d="M 16,16 L 40,16 L 38,50 L 18,50 Z" {...p} strokeWidth={2.5} />
-      <line x1={19} y1={30} x2={37} y2={30} stroke={c} strokeWidth={1.5} />
-      <circle cx={24} cy={30} r={1.5} fill={c} stroke="none" />
-      <circle cx={28} cy={30} r={1.5} fill={c} stroke="none" />
-      <circle cx={32} cy={30} r={1.5} fill={c} stroke="none" />
+      <path d="M 18,28 L 38,28 L 36,50 L 20,50 Z" {...p} strokeWidth={2.2} />
+      <line x1={20} y1={38} x2={36} y2={38} {...p} strokeWidth={1.5} />
+      <circle cx={25} cy={38} r={1.8} fill={c} stroke="none" />
+      <circle cx={28} cy={38} r={1.8} fill={c} stroke="none" />
+      <circle cx={31} cy={38} r={1.8} fill={c} stroke="none" />
     </g>,
 
     'FLAT WHITE': <g>
@@ -180,9 +180,13 @@ function PosIcon({ type }: { type: string }) {
     </g>,
 
     'CAPPUCCINO': <g>
-      {wideCup}
-      <path d="M 10,24 Q 10,12 28,12 Q 46,12 46,24" {...p} strokeWidth={2} />
-      <circle cx={28} cy={20} r={3.5} {...p} strokeWidth={1.5} />
+      {/* cup sides + bottom only — no top line so dome arc connects cleanly */}
+      <path d="M 8,26 L 10,50 L 46,50 L 48,26" {...p} strokeWidth={2.2} />
+      <path d="M 48,32 Q 54,32 54,40 Q 54,46 48,46" {...p} strokeWidth={2} />
+      <ellipse cx={28} cy={52} rx={22} ry={3} {...p} strokeWidth={1.5} />
+      {/* foam dome arc — connects exactly to cup top edges */}
+      <path d="M 8,26 A 20,13 0 0 1 48,26" {...p} strokeWidth={2.2} />
+      <circle cx={28} cy={19} r={4} {...p} strokeWidth={1.5} />
     </g>,
 
     'LATTE': <g>
