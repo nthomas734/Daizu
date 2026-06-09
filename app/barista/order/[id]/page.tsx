@@ -25,6 +25,14 @@ export default function BaristaOrderPage({
   const router = useRouter();
   const viewport = useViewport();
   const isTablet = viewport === 'tablet';
+  const [screenW, setScreenW] = useState(0);
+  useEffect(() => {
+    const update = () => setScreenW(window.innerWidth);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  const isLargeTablet = isTablet && screenW >= 1200;
   const [order, setOrder] = useState<Order | null>(null);
   const [readyPhrase, setReadyPhrase] = useState<{ jp: string; en: string } | null>(null);
 
@@ -121,6 +129,102 @@ export default function BaristaOrderPage({
     }
   };
 
+  // ── named JSX blocks (shared by both phone and large-tablet layouts) ──────
+  const orderInfoBlock = (
+    <div style={{ marginBottom: '24px' }}>
+      <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.25em', color: palette.surface, opacity: 0.6, textTransform: 'uppercase', margin: 0 }}>
+        order · {timeAgo(order.created_at)} · for {order.customer}
+      </p>
+      <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '40px', margin: '4px 0 0', letterSpacing: '-0.02em', color: palette.bg, lineHeight: 1 }}>
+        {order.drink.toLowerCase()}
+      </h2>
+      <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+        {!isCocktail && (
+          <>
+            <Tag palette={palette}>{order.temp}</Tag>
+            {order.milk && <Tag palette={palette}>{order.milk} milk</Tag>}
+            {order.syrups.map((s) => <Tag key={s} palette={palette} emphasis>{s} ({order.sweetness})</Tag>)}
+            {order.extras.map((e) => <Tag key={e} palette={palette}>{e.replace(/_/g, ' ')}</Tag>)}
+          </>
+        )}
+        {isCocktail && (
+          <>
+            {order.quantity && order.quantity > 1 && <Tag palette={palette} emphasis>× {order.quantity}</Tag>}
+            {order.strength && order.strength !== 'standard' && <Tag palette={palette} emphasis>{order.strength}</Tag>}
+            {order.spirit && <Tag palette={palette}>{order.spirit}</Tag>}
+          </>
+        )}
+      </div>
+      {isCocktail && cocktailRecipe && (
+        <div style={{ marginTop: '14px', padding: '14px 16px', background: palette.bg, color: palette.cream, borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <GlassIcon type={cocktailRecipe.glass} size={44} color={palette.brass} stroke={2} />
+          <div>
+            <p style={{ margin: 0, fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.2em', color: palette.brass, textTransform: 'uppercase' }}>glassware</p>
+            <p style={{ margin: '2px 0 6px', fontSize: '14px' }}>{cocktailRecipe.glassLabel}</p>
+            <p style={{ margin: 0, fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.2em', color: palette.brass, textTransform: 'uppercase' }}>garnish</p>
+            <p style={{ margin: '2px 0 0', fontSize: '14px' }}>{cocktailRecipe.garnish}</p>
+          </div>
+        </div>
+      )}
+      {order.notes && (
+        <div style={{ marginTop: '14px', padding: '12px 16px', background: `${palette.bg}0D`, color: palette.bg, borderRadius: '12px', border: `0.5px solid ${palette.bg}22`, fontSize: '13px', fontStyle: 'italic' }}>
+          &quot;{order.notes}&quot;
+        </div>
+      )}
+    </div>
+  );
+
+  const scaleBannerBlock = quantity > 1 ? (
+    <div style={{ marginBottom: '16px', padding: '12px 16px', background: palette.accent, color: palette.cream, borderRadius: '12px', fontFamily: "'Geist Mono', monospace", fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+      making {quantity} — scale each line ×{quantity}
+    </div>
+  ) : null;
+
+  const ingredientsBlock = (
+    <Section title="ingredients" palette={palette}>
+      <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+        {fullIngredients.map((ing, i) => {
+          const hint = quantity > 1 ? scaleHint(ing, quantity) : null;
+          return (
+            <li key={i} style={{ padding: '13px 0', borderBottom: i < fullIngredients.length - 1 ? `1px solid ${palette.bg}11` : 'none', fontFamily: "'Manrope', sans-serif", fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ color: palette.brass, fontFamily: "'Geist Mono', monospace", fontSize: '11px' }}>{String(i + 1).padStart(2, '0')}</span>
+              <span>{ing}</span>
+              {hint && <span style={{ color: palette.accent, fontFamily: "'Geist Mono', monospace", fontSize: '12px', fontWeight: 600 }}>→ {hint}</span>}
+            </li>
+          );
+        })}
+      </ul>
+    </Section>
+  );
+
+  const recipeBlock = (
+    <Section title={isCocktail ? 'recipe' : `recipe · ${(RECIPES[order.drink] || RECIPES.LATTE).ratio}`} palette={palette}>
+      <ol style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+        {steps.map((step, i) => (
+          <li key={i} style={{ padding: '12px 0', borderBottom: i < steps.length - 1 ? `1px solid ${palette.bg}11` : 'none', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+            <div style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '50%', background: palette.bg, color: palette.cream, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Geist Mono', monospace", fontSize: '11px', fontWeight: 600 }}>{i + 1}</div>
+            <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.5, paddingTop: '3px' }}>{step}</p>
+          </li>
+        ))}
+      </ol>
+    </Section>
+  );
+
+  const actionBlock = (
+    <>
+      {order.status === 'received' && (
+        <button onClick={advance} style={{ width: '100%', marginTop: '12px', background: palette.brass, color: palette.bg, border: 'none', padding: '16px', fontFamily: "'Geist Mono', monospace", fontSize: '13px', letterSpacing: '0.25em', fontWeight: 600, textTransform: 'uppercase', borderRadius: '12px', cursor: 'pointer' }}>
+          {isCocktail ? 'start mixing' : 'start brewing'}
+        </button>
+      )}
+      {order.status === 'brewing' && (
+        <button onClick={markReady} style={{ width: '100%', marginTop: '12px', background: palette.bg, color: palette.cream, border: 'none', padding: '16px', fontFamily: "'Geist Mono', monospace", fontSize: '13px', letterSpacing: '0.25em', fontWeight: 600, textTransform: 'uppercase', borderRadius: '12px', cursor: 'pointer' }}>
+          ✓ ready for pickup
+        </button>
+      )}
+    </>
+  );
+
   return (
     <div
       style={{
@@ -135,10 +239,11 @@ export default function BaristaOrderPage({
         minHeight: '100vh',
         paddingBottom: '40px',
         fontFamily: "'Manrope', sans-serif",
-        maxWidth: isTablet ? '900px' : '480px',
+        maxWidth: isLargeTablet ? '1300px' : isTablet ? '900px' : '480px',
         margin: '0 auto',
       }}
     >
+      {/* ── header ────────────────────────────────────────────────────────── */}
       <div
         style={{
           background: palette.bg,
@@ -187,294 +292,32 @@ export default function BaristaOrderPage({
         </span>
       </div>
 
-      <div style={{ padding: '20px' }}>
-        <div style={{ marginBottom: '24px' }}>
-          <p
-            style={{
-              fontFamily: "'Geist Mono', monospace",
-              fontSize: '10px',
-              letterSpacing: '0.25em',
-              color: palette.surface,
-              opacity: 0.6,
-              textTransform: 'uppercase',
-              margin: 0,
-            }}
-          >
-            order · {timeAgo(order.created_at)} · for {order.customer}
-          </p>
-          <h2
-            style={{
-              fontFamily: "'Fraunces', serif",
-              fontWeight: 300,
-              fontSize: '40px',
-              margin: '4px 0 0',
-              letterSpacing: '-0.02em',
-              color: palette.bg,
-              lineHeight: 1,
-            }}
-          >
-            {order.drink.toLowerCase()}
-          </h2>
-          <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
-            {!isCocktail && (
-              <>
-                <Tag palette={palette}>{order.temp}</Tag>
-                {order.milk && <Tag palette={palette}>{order.milk} milk</Tag>}
-                {order.syrups.map((s) => (
-                  <Tag key={s} palette={palette} emphasis>
-                    {s} ({order.sweetness})
-                  </Tag>
-                ))}
-                {order.extras.map((e) => (
-                  <Tag key={e} palette={palette}>
-                    {e.replace(/_/g, ' ')}
-                  </Tag>
-                ))}
-              </>
-            )}
-            {isCocktail && (
-              <>
-                {order.quantity && order.quantity > 1 && (
-                  <Tag palette={palette} emphasis>
-                    × {order.quantity}
-                  </Tag>
-                )}
-                {order.strength && order.strength !== 'standard' && (
-                  <Tag palette={palette} emphasis>
-                    {order.strength}
-                  </Tag>
-                )}
-                {order.spirit && <Tag palette={palette}>{order.spirit}</Tag>}
-              </>
-            )}
+      {/* ── content ───────────────────────────────────────────────────────── */}
+      {isLargeTablet ? (
+        /* two-column layout for large iPad */
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', padding: '28px 32px' }}>
+          {/* LEFT: order info + ingredients */}
+          <div>
+            {orderInfoBlock}
+            {scaleBannerBlock}
+            {ingredientsBlock}
           </div>
-
-          {isCocktail && cocktailRecipe && (
-            <div
-              style={{
-                marginTop: '14px',
-                padding: '14px 16px',
-                background: palette.bg,
-                color: palette.cream,
-                borderRadius: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '14px',
-              }}
-            >
-              <GlassIcon
-                type={cocktailRecipe.glass}
-                size={44}
-                color={palette.brass}
-                stroke={2}
-              />
-              <div>
-                <p
-                  style={{
-                    margin: 0,
-                    fontFamily: "'Geist Mono', monospace",
-                    fontSize: '10px',
-                    letterSpacing: '0.2em',
-                    color: palette.brass,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  glassware
-                </p>
-                <p style={{ margin: '2px 0 6px', fontSize: '14px' }}>
-                  {cocktailRecipe.glassLabel}
-                </p>
-                <p
-                  style={{
-                    margin: 0,
-                    fontFamily: "'Geist Mono', monospace",
-                    fontSize: '10px',
-                    letterSpacing: '0.2em',
-                    color: palette.brass,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  garnish
-                </p>
-                <p style={{ margin: '2px 0 0', fontSize: '14px' }}>
-                  {cocktailRecipe.garnish}
-                </p>
-              </div>
-            </div>
-          )}
-          {order.notes && (
-            <div
-              style={{
-                marginTop: '14px',
-                padding: '12px 16px',
-                background: `${palette.bg}0D`,
-                color: palette.bg,
-                borderRadius: '12px',
-                border: `0.5px solid ${palette.bg}22`,
-                fontSize: '13px',
-                fontStyle: 'italic',
-              }}
-            >
-              &quot;{order.notes}&quot;
-            </div>
-          )}
+          {/* RIGHT: recipe + actions */}
+          <div style={{ paddingTop: '8px' }}>
+            {recipeBlock}
+            {actionBlock}
+          </div>
         </div>
-
-        {quantity > 1 && (
-          <div
-            style={{
-              marginBottom: '16px',
-              padding: '12px 16px',
-              background: palette.accent,
-              color: palette.cream,
-              borderRadius: '12px',
-              fontFamily: "'Geist Mono', monospace",
-              fontSize: '12px',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-            }}
-          >
-            making {quantity} — scale each line ×{quantity}
-          </div>
-        )}
-
-        <Section title="ingredients" palette={palette}>
-          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-            {fullIngredients.map((ing, i) => {
-              const hint = quantity > 1 ? scaleHint(ing, quantity) : null;
-              return (
-              <li
-                key={i}
-                style={{
-                  padding: '13px 0',
-                  borderBottom:
-                    i < fullIngredients.length - 1 ? `1px solid ${palette.bg}11` : 'none',
-                  fontFamily: "'Manrope', sans-serif",
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                }}
-              >
-                <span
-                  style={{
-                    color: palette.brass,
-                    fontFamily: "'Geist Mono', monospace",
-                    fontSize: '11px',
-                  }}
-                >
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <span>{ing}</span>
-                {hint && (
-                  <span
-                    style={{
-                      color: palette.accent,
-                      fontFamily: "'Geist Mono', monospace",
-                      fontSize: '12px',
-                      fontWeight: 600,
-                    }}
-                  >
-                    → {hint}
-                  </span>
-                )}
-              </li>
-              );
-            })}
-          </ul>
-        </Section>
-
-        <Section
-          title={
-            isCocktail
-              ? 'recipe'
-              : `recipe · ${(RECIPES[order.drink] || RECIPES.LATTE).ratio}`
-          }
-          palette={palette}
-        >
-          <ol style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-            {steps.map((step, i) => (
-              <li
-                key={i}
-                style={{
-                  padding: '12px 0',
-                  borderBottom: i < steps.length - 1 ? `1px solid ${palette.bg}11` : 'none',
-                  display: 'flex',
-                  gap: '14px',
-                  alignItems: 'flex-start',
-                }}
-              >
-                <div
-                  style={{
-                    flexShrink: 0,
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    background: palette.bg,
-                    color: palette.cream,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontFamily: "'Geist Mono', monospace",
-                    fontSize: '11px',
-                    fontWeight: 600,
-                  }}
-                >
-                  {i + 1}
-                </div>
-                <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.5, paddingTop: '3px' }}>
-                  {step}
-                </p>
-              </li>
-            ))}
-          </ol>
-        </Section>
-
-        {order.status === 'received' && (
-          <button
-            onClick={advance}
-            style={{
-              width: '100%',
-              marginTop: '12px',
-              background: palette.brass,
-              color: palette.bg,
-              border: 'none',
-              padding: '16px',
-              fontFamily: "'Geist Mono', monospace",
-              fontSize: '13px',
-              letterSpacing: '0.25em',
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              borderRadius: '12px',
-              cursor: 'pointer',
-            }}
-          >
-            {isCocktail ? 'start mixing' : 'start brewing'}
-          </button>
-        )}
-        {order.status === 'brewing' && (
-          <button
-            onClick={markReady}
-            style={{
-              width: '100%',
-              marginTop: '12px',
-              background: palette.bg,
-              color: palette.cream,
-              border: 'none',
-              padding: '16px',
-              fontFamily: "'Geist Mono', monospace",
-              fontSize: '13px',
-              letterSpacing: '0.25em',
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              borderRadius: '12px',
-              cursor: 'pointer',
-            }}
-          >
-            ✓ ready for pickup
-          </button>
-        )}
-      </div>
+      ) : (
+        /* single-column layout for phone/small tablet */
+        <div style={{ padding: '20px' }}>
+          {orderInfoBlock}
+          {scaleBannerBlock}
+          {ingredientsBlock}
+          {recipeBlock}
+          {actionBlock}
+        </div>
+      )}
 
       {readyPhrase && (
         <div
