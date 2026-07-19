@@ -1,10 +1,15 @@
 import type { Metadata, Viewport } from 'next';
 import { RegisterSW } from '@/components/RegisterSW';
+import { UpdateBanner } from '@/components/UpdateBanner';
 
 export const metadata: Metadata = {
   title: 'daizu · 大豆',
   description: "Bean's home cafe",
-  manifest: '/manifest.json',
+  // v=2 busts iOS/Safari's cached manifest. iOS bakes background_color in
+  // at add-to-home-screen time and reuses a stale cached manifest on
+  // re-add — a new URL is the only guaranteed bust. Bump the query any
+  // time manifest.json changes.
+  manifest: '/manifest.json?v=2',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -62,6 +67,7 @@ export default function RootLayout({
           }}
         />
         <RegisterSW />
+        <UpdateBanner />
         {children}
       </body>
     </html>
