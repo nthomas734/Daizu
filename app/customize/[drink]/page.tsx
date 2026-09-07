@@ -160,7 +160,7 @@ export default function CustomizePage({
     >
       <div
         style={{
-          padding: '20px 20px 140px',
+          padding: '20px 20px calc(140px + env(safe-area-inset-bottom))',
           maxWidth: '480px',
           margin: '0 auto',
         }}
@@ -520,7 +520,8 @@ export default function CustomizePage({
         disabled={submitting}
         style={{
           position: 'fixed',
-          bottom: '20px',
+          // stay above the iPhone home indicator in the installed PWA
+          bottom: 'calc(20px + env(safe-area-inset-bottom))',
           left: '20px',
           right: '20px',
           maxWidth: '440px',
