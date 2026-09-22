@@ -24,12 +24,15 @@ export function FlapTile({
   palette,
   jp = false,
   tileSize = 'sm',
+  fluid = false,
 }: {
   char: string;
   delay?: number;
   palette: Palette;
   jp?: boolean;
   tileSize?: TileSize;
+  /** Let the tile shrink/grow to share the row's width (phone boards). */
+  fluid?: boolean;
 }) {
   const [display, setDisplay] = useState(' ');
   const target = jp ? char || ' ' : (char || ' ').toUpperCase();
@@ -60,6 +63,10 @@ export function FlapTile({
         position: 'relative',
         width: `${dims.w}px`,
         height: `${dims.h}px`,
+        // Phone boards: 16 fixed 21px tiles (366px) never truly fit a phone —
+        // older iOS Safari shrank them implicitly, newer builds do not, so the
+        // rows spill past the board. Make the flexing explicit instead.
+        ...(fluid ? { flex: '1 1 0', minWidth: 0, maxWidth: `${dims.w}px` } : { flexShrink: 0 }),
         background: palette.surface,
         color: palette.tileText,
         fontFamily: jp
@@ -99,6 +106,7 @@ export function FlapRow({
   jp = false,
   refreshKey = 0,
   tileSize = 'sm',
+  fluid = false,
 }: {
   text: string;
   width?: number;
@@ -107,12 +115,20 @@ export function FlapRow({
   jp?: boolean;
   refreshKey?: number;
   tileSize?: TileSize;
+  /** Row fills its container and tiles share the width evenly (phone boards). */
+  fluid?: boolean;
 }) {
   const padded = (text || '').padEnd(width, ' ').slice(0, width);
   const chars = jp ? Array.from(padded) : padded.split('');
   const gap = TILE_DIMS[tileSize].gap;
   return (
-    <div style={{ display: 'flex', gap: `${gap}px` }}>
+    <div
+      style={{
+        display: 'flex',
+        gap: `${gap}px`,
+        ...(fluid ? { width: '100%', minWidth: 0, justifyContent: 'center' } : {}),
+      }}
+    >
       {chars.map((c, i) => (
         <FlapTile
           key={`${refreshKey}-${i}-${c}`}
@@ -121,6 +137,7 @@ export function FlapRow({
           palette={palette}
           jp={jp}
           tileSize={tileSize}
+          fluid={fluid}
         />
       ))}
     </div>

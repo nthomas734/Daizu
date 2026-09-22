@@ -183,7 +183,7 @@ export default function MenuPage() {
     >
       <div
         style={{
-          paddingBottom: '6px',
+          padding: isTablet ? '0 0 6px' : '0 8px 6px 10px',
           borderBottom: `1px solid ${palette.brass}22`,
           marginBottom: '4px',
           display: 'flex',
@@ -198,6 +198,7 @@ export default function MenuPage() {
           jp={lang === 'jp'}
           refreshKey={refreshKey}
           tileSize={tileSize}
+          fluid={!isTablet}
         />
       </div>
 
@@ -222,6 +223,7 @@ export default function MenuPage() {
               alignItems: 'center',
               justifyContent: 'space-between',
               width: '100%',
+              minWidth: 0,
               transition: 'background 200ms ease, border-left 200ms ease',
             }}
           >
@@ -233,6 +235,7 @@ export default function MenuPage() {
               jp={lang === 'jp'}
               refreshKey={refreshKey}
               tileSize={tileSize}
+              fluid={!isTablet}
             />
             
           </button>
@@ -241,7 +244,7 @@ export default function MenuPage() {
 
       <div
         style={{
-          paddingTop: '6px',
+          padding: isTablet ? '6px 0 0' : '6px 8px 0 10px',
           borderTop: `1px solid ${palette.brass}22`,
           marginTop: '4px',
           display: 'flex',
@@ -256,6 +259,7 @@ export default function MenuPage() {
           jp={lang === 'jp'}
           refreshKey={refreshKey}
           tileSize={tileSize}
+          fluid={!isTablet}
         />
       </div>
     </div>
