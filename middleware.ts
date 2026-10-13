@@ -15,6 +15,7 @@ export function middleware(req: NextRequest) {
   if (
     pathname.startsWith('/auth') ||
     pathname.startsWith('/api/auth') ||
+    pathname === '/api/notify' || // pg_cron; gated by its own x-daizu-key
     pathname === '/manifest.json' ||
     pathname === '/sw.js' ||
     pathname.startsWith('/icon-')

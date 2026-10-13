@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendPushover, pickReadyPhrase } from '@/lib/pushover';
+import { sendToEndpoint, sendToRole } from '@/lib/push-server';
+
+export const runtime = 'nodejs';
 
 export async function POST(
   _req: NextRequest,
@@ -38,11 +41,22 @@ export async function POST(
   const emoji = isCocktail ? '🍸' : '☕';
   const qty = data.quantity && data.quantity > 1 ? `${data.quantity} ` : '';
 
-  sendPushover(
-    'customer',
-    `${phrase.jp}\nyour ${qty}${data.drink.toLowerCase()}${data.quantity > 1 ? 's are' : ' is'} ready ${emoji}\n(${phrase.en})`,
-    { title: `${emoji} daizu` }
-  );
+  const message = `your ${qty}${data.drink.toLowerCase()}${data.quantity > 1 ? 's are' : ' is'} ready ${emoji}`;
+  const push = {
+    title: `${emoji} ${phrase.jp}`,
+    body: `${message} (${phrase.en})`,
+    url: `/confirm/${data.id}${isCocktail ? '?from=bar' : ''}`,
+    tag: `daizu-ready-${data.id}`,
+  };
+
+  // Back to the phone that ordered; if it never opted in (or has since
+  // gone away), every customer device; Pushover only if nobody's on web
+  // push yet.
+  let pushed = data.push_endpoint ? await sendToEndpoint(data.push_endpoint, push) : 0;
+  if (pushed === 0) pushed = await sendToRole('customer', push);
+  if (pushed === 0) {
+    await sendPushover('customer', `${phrase.jp}\n${message}\n(${phrase.en})`, { title: `${emoji} daizu` });
+  }
 
   return NextResponse.json({ order: data });
 }

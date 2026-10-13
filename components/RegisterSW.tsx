@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
+import { syncPushSubscription } from '@/lib/push';
 
-// Registers the offline-shell service worker (public/sw.js).
+// Registers the offline-shell service worker (public/sw.js), then
+// self-heals this device's push subscription if it was opted in.
 // Rendered once from the root layout; renders nothing.
 export function RegisterSW() {
   useEffect(() => {
@@ -13,7 +15,7 @@ export function RegisterSW() {
       navigator.serviceWorker.getRegistrations?.().then((regs) => regs.forEach((r) => r.unregister()));
       return;
     }
-    navigator.serviceWorker.register('/sw.js').catch(() => {
+    navigator.serviceWorker.register('/sw.js').then(() => syncPushSubscription()).catch(() => {
       // Offline support is a nice-to-have — never block the app on it
     });
   }, []);

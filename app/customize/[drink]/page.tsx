@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { currentEndpoint } from '@/lib/push';
 import {
   COCKTAILS,
   COCKTAIL_NOTE_PLACEHOLDERS,
@@ -125,10 +126,11 @@ export default function CustomizePage({
           customer: name.trim() || 'Dez',
           saveAsFav,
         };
+    const pushEndpoint = await currentEndpoint();
     const res = await fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, pushEndpoint }),
     });
     const data = await res.json();
     if (data.order) {

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendPushover } from '@/lib/pushover';
+import { sendToRole } from '@/lib/push-server';
+
+export const runtime = 'nodejs';
 
 // GET — fetch recent orders (last 24h). The barista hub filters this for
 // the queue view; the customer's confirm screen pulls a single order by id.
@@ -21,7 +24,7 @@ export async function GET() {
   return NextResponse.json({ orders: data });
 }
 
-// POST — create a new order, then fire a Pushover notification to the barista.
+// POST — create a new order, then push it to the bartender's phone(s).
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const sb = supabaseAdmin();
@@ -43,6 +46,8 @@ export async function POST(req: NextRequest) {
     spirit:    isCocktail ? (body.spirit ?? null) : null,
     notes:     body.notes || '',
     status:    'received',
+    // The ordering device, if it's opted in to push — gets the "ready" ping
+    push_endpoint: body.pushEndpoint || null,
   };
 
   const { data, error } = await sb
@@ -78,7 +83,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Build the Pushover notification body. Different shape per category.
+  // Build the notification body. Different shape per category.
   const description = isCocktail
     ? [
         body.quantity && body.quantity > 1 ? `× ${body.quantity}` : null,
@@ -101,7 +106,14 @@ export async function POST(req: NextRequest) {
     description ? `\n${description}` : ''
   }${body.notes ? `\nNote: ${body.notes}` : ''}`;
 
-  sendPushover('barista', msgBody, { title });
+  // Web push to every bartender device except the one that placed the
+  // order. Pushover only as a fallback until a bartender phone opts in.
+  const pushed = await sendToRole(
+    'barista',
+    { title, body: msgBody, url: `/barista/order/${data.id}`, tag: `daizu-order-${data.id}` },
+    payload.push_endpoint
+  );
+  if (pushed === 0) await sendPushover('barista', msgBody, { title });
 
   return NextResponse.json({ order: data });
 }

@@ -4,6 +4,7 @@ import { use, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { COLORS, Order } from '@/lib/menu';
 import { FlapRow } from '@/components/SplitFlap';
+import { enablePush, getPushStatus, type PushStatus } from '@/lib/push';
 
 export default function ConfirmPage({
   params,
@@ -20,6 +21,20 @@ export default function ConfirmPage({
   const [order, setOrder] = useState<Order | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(5);
   const [showReturn, setShowReturn] = useState(false);
+  const [pushStatus, setPushStatus] = useState<PushStatus | null>(null);
+  const [pushBusy, setPushBusy] = useState(false);
+
+  useEffect(() => { getPushStatus().then(setPushStatus); }, []);
+
+  // First order on a new phone: opt in right here, and attach this order
+  const turnOnReadyPings = async () => {
+    setPushBusy(true);
+    try {
+      await enablePush('customer', Number(id));
+    } catch {}
+    setPushStatus(await getPushStatus());
+    setPushBusy(false);
+  };
 
   const isCocktail = order?.category === 'bar';
   const palette = isCocktail ? COLORS.bar : COLORS.cafe;
@@ -311,6 +326,34 @@ export default function ConfirmPage({
         >
           cancel · {secondsLeft}s
         </button>
+      )}
+
+      {/* Ready ping — offer once per phone; afterwards every order pings */}
+      {!isReady && pushStatus === 'off' && (
+        <button
+          onClick={turnOnReadyPings}
+          disabled={pushBusy}
+          style={{
+            background: 'transparent',
+            border: `1px solid ${palette.brass}66`,
+            color: palette.brass,
+            padding: '10px 18px',
+            borderRadius: '2px',
+            fontFamily: "'Geist Mono', monospace",
+            fontSize: '10px',
+            letterSpacing: '0.2em',
+            textTransform: 'uppercase',
+            cursor: 'pointer',
+            opacity: pushBusy ? 0.6 : 1,
+          }}
+        >
+          ping me when it&apos;s ready
+        </button>
+      )}
+      {!isReady && (pushStatus === 'customer' || pushStatus === 'barista') && (
+        <p style={{ margin: 0, fontFamily: "'Geist Mono', monospace", fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', color: palette.brass, opacity: 0.6 }}>
+          — we&apos;ll ping you when it&apos;s ready —
+        </p>
       )}
 
       {/* Flapboard return button — appears after cancel window closes */}

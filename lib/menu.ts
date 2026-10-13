@@ -11,12 +11,21 @@ export const DRINKS = [
   { name: 'LATTE',      jp: 'ラテ',             price: '$6', note: 'espresso · steamed milk' },
 ] as const;
 
+// shelfDays = how long a homemade batch keeps in the fridge. The barista
+// hub logs when each batch was made; /api/notify nags as it runs out.
 export const SYRUPS = [
-  { id: 'vanilla',    label: 'vanilla' },
-  { id: 'honey',      label: 'honey' },
-  { id: 'raspberry',  label: 'raspberry',  seasonal: true },
-  { id: 'strawberry', label: 'strawberry', seasonal: true },
+  { id: 'vanilla',    label: 'vanilla',    shelfDays: 14 },
+  { id: 'honey',      label: 'honey',      shelfDays: 14 },
+  { id: 'raspberry',  label: 'raspberry',  shelfDays: 10, seasonal: true },
+  { id: 'strawberry', label: 'strawberry', shelfDays: 10, seasonal: true },
 ] as const;
+
+// Whole days until a batch made on `madeOn` expires, counted from `today`
+// (both YYYY-MM-DD). 0 = expires today, negative = already expired.
+export function syrupDaysLeft(madeOn: string, shelfDays: number, today: string): number {
+  const day = (iso: string) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10));
+  return Math.round((day(madeOn) - day(today)) / 86_400_000) + shelfDays;
+}
 
 export const EXTRAS = [
   { id: 'cinnamon',      label: 'cinnamon' },

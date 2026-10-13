@@ -16,6 +16,47 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// ── Web push: new orders, "ready" pings, syrup reminders ──
+// Payload is JSON: { title, body, url, tag }. iOS requires every push to
+// show a notification, so always call showNotification.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : '' };
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'daizu', {
+      body: data.body || '',
+      icon: '/icon-180.png',
+      badge: '/icon-180.png',
+      tag: data.tag || 'daizu',
+      data: { url: data.url || '/' },
+    })
+  );
+});
+
+// Tap → straight to the order (or the hub). Reuse an open window if
+// there is one, otherwise cold-start at the deep link.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    (async () => {
+      const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const w of wins) {
+        try {
+          await w.focus();
+          await w.navigate(url);
+          return;
+        } catch {}
+      }
+      await self.clients.openWindow(url);
+    })()
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;

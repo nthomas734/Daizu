@@ -21,11 +21,13 @@ Set in Vercel (changes require a redeploy to take effect):
 
 - `DAIZU_PASSWORD` — the single shared site password
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`
-- `PUSHOVER_APP_TOKEN`, `PUSHOVER_BARISTA_KEY`, `PUSHOVER_CUSTOMER_KEY`
+- `PUSHOVER_APP_TOKEN`, `PUSHOVER_BARISTA_KEY`, `PUSHOVER_CUSTOMER_KEY` — legacy; only used as a fallback when no device of the target role is on web push (see below). Safe to delete once both phones are opted in.
+
+Web push needs **no** Vercel env vars: the VAPID public key is a constant in `lib/push.ts`, the private key is in Supabase Vault (`daizu_vapid_private`, read through the service-role-only RPC `daizu_vapid_private()`).
 
 ## What this is
 
-A private two-person home cafe/bar PWA. One person (the customer) orders a coffee or cocktail from a split-flap menu board; the other (the barista/bartender) gets a push notification, works the queue, and taps "ready", which pushes a Japanese phrase back to the customer. Next.js 15 App Router + React 19, Supabase for storage, Pushover for notifications.
+A private two-person home cafe/bar PWA. One person (the customer) orders a coffee or cocktail from a split-flap menu board; the other (the barista/bartender) gets a push notification, works the queue, and taps "ready", which pushes a Japanese phrase back to the customer. Next.js 15 App Router + React 19, Supabase for storage, Web Push for notifications (Pushover as legacy fallback).
 
 ## Auth model — `middleware.ts`
 
@@ -49,6 +51,15 @@ Order lifecycle:
 4. "Ready for pickup" hits `POST /api/orders/[id]/ready` — a dedicated route because it does more than a status change: it reads the order's category, picks a random phrase via `pickReadyPhrase(category)` (separate cafe/bar phrase pools in `lib/pushover.ts`), persists `ready_phrase_jp`/`ready_phrase_en` + `ready_at`, and pushes to `customer`.
 
 `GET /api/orders` returns only the last 24h. `DELETE /api/orders` clears all non-`ready` orders ("clear all"). `sendPushover` never throws and no-ops with a console warning when tokens are missing, so a misconfigured Pushover degrades silently rather than failing the order.
+
+## Notifications (web push, added 2026-10-12)
+
+- `daizu_push` — one row per opted-in device (`endpoint` unique, `role` = `barista` | `customer`). Role is also kept in `localStorage['daizu-push-role']` so `RegisterSW` can self-heal the subscription on launch (`syncPushSubscription`).
+- Bartender opts in from hub → settings → "order alerts on this phone". Customer opts in from the confirm screen's "ping me when it's ready" (shown only when this phone isn't subscribed; it also attaches the current order).
+- Every order POST carries `pushEndpoint` (the ordering device, from `currentEndpoint()`), stored as `daizu_orders.push_endpoint`. New-order push → all `barista` devices except that endpoint. Ready push → that endpoint, else all `customer` devices, else Pushover.
+- Syrup batches: `daizu_syrup_batches (syrup_id, made_on)`; shelf life is `shelfDays` on `SYRUPS` in `lib/menu.ts`, `syrupDaysLeft()` does the math. Logged from hub → settings → "syrup batches" (tap "new batch" twice = made today).
+- pg_cron `daizu-syrups` (16:00 UTC ≈ 9am Pacific) POSTs `{kind:'syrups'}` to `/api/notify` with `x-daizu-key` from Vault `daizu_alert_key`; the route checks its sha256. It nags the bartender daily about syrups expiring tomorrow or already expired, skipping any that are 86'd. `{kind:'test', role}` pings every device of a role — fire it via pg_net, not curl (Vercel bot checkpoint). `/api/notify` is allow-listed in `middleware.ts`.
+- `lib/push-server.ts` is server-only (`runtime = 'nodejs'` on every route that imports it — web-push needs Node crypto). Production URL is `daizu-henna.vercel.app`.
 
 ## Supabase schema vs. the app
 

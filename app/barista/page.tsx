@@ -15,8 +15,10 @@ import {
   Order,
   STRENGTH_TO_OZ,
   SYRUPS,
+  syrupDaysLeft,
 } from '@/lib/menu';
 import { timeAgo } from '@/lib/time';
+import { currentEndpoint, disablePush, enablePush, getPushStatus, type PushStatus } from '@/lib/push';
 import { useViewport } from '@/lib/useViewport';
 
 type OutOfStock = { drinks: string[]; milks: string[]; syrups: string[] };
@@ -216,6 +218,12 @@ export default function BaristaHubPage() {
   const [tab, setTab] = useState<'queue' | 'order' | 'stats' | 'settings'>('queue');
   const [orders, setOrders] = useState<Order[]>([]);
   const [outOfStock, setOutOfStock] = useState<OutOfStock>({ drinks: [], milks: [], syrups: [] });
+  const [batches, setBatches] = useState<Record<string, string>>({});
+
+  // Deep link from a syrup reminder: /barista?tab=settings
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('tab') === 'settings') setTab('settings');
+  }, []);
 
   useEffect(() => {
     let stop = false;
@@ -236,7 +244,21 @@ export default function BaristaHubPage() {
       .then((r) => r.json())
       .then((d) => d.outOfStock && setOutOfStock(d.outOfStock))
       .catch(() => {});
+    fetch('/api/syrups', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => d.batches && setBatches(d.batches))
+      .catch(() => {});
   }, []);
+
+  const logBatch = async (syrupId: string) => {
+    const madeOn = localToday();
+    setBatches((prev) => ({ ...prev, [syrupId]: madeOn }));
+    await fetch('/api/syrups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ syrupId, madeOn }),
+    });
+  };
 
   const active = orders.filter((o) => o.status !== 'ready' && o.status !== 'cancelled');
 
@@ -327,7 +349,7 @@ export default function BaristaHubPage() {
         {tab === 'order' && <OrderBody palette={palette} isTablet={isTablet} />}
         {tab === 'stats' && <StatsBody orders={orders} palette={palette} />}
         {tab === 'settings' && (
-          <SettingsBody outOfStock={outOfStock} onToggle={toggleStock} palette={palette} />
+          <SettingsBody outOfStock={outOfStock} onToggle={toggleStock} batches={batches} onLogBatch={logBatch} palette={palette} />
         )}
       </div>
     </div>
@@ -370,10 +392,11 @@ function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
       ? { category: 'bar', drink: selected.name, strength, quantity: qty, spirit: isHighball ? spirit : null, customer: name.trim() || 'bar', notes: '' }
       : { category: 'cafe', drink: selected.name, temp, milk: isMilkDrink ? 'whole' : null, syrups: [], sweetness: 'normal', extras: [], customer: name.trim() || 'bar', notes: '' };
 
+    const pushEndpoint = await currentEndpoint();
     const res = await fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, pushEndpoint }),
     });
     const data = await res.json();
     setSubmitting(false);
@@ -670,9 +693,11 @@ function StatRow({ label, value, palette }: { label: string; value: string; pale
 // ─────────────────────────────────────────────────────────────────────────────
 // SettingsBody (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
-function SettingsBody({ outOfStock, onToggle, palette }: {
-  outOfStock: OutOfStock; onToggle: (category: 'drinks' | 'milks' | 'syrups', id: string) => void; palette: any;
+function SettingsBody({ outOfStock, onToggle, batches, onLogBatch, palette }: {
+  outOfStock: OutOfStock; onToggle: (category: 'drinks' | 'milks' | 'syrups', id: string) => void;
+  batches: Record<string, string>; onLogBatch: (syrupId: string) => void; palette: any;
 }) {
+  const today = localToday();
   return (
     <div style={{ padding: '20px', color: palette.bg }}>
       <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '26px', margin: '0 0 6px', letterSpacing: '-0.02em' }}>what&apos;s 86&apos;d today?</h2>
@@ -686,6 +711,19 @@ function SettingsBody({ outOfStock, onToggle, palette }: {
       <Group label="syrups" palette={palette}>
         {SYRUPS.map((s) => <Toggle key={s.id} label={s.label} active={outOfStock.syrups.includes(s.id)} onClick={() => onToggle('syrups', s.id)} palette={palette} />)}
       </Group>
+      <Group label="syrup batches" palette={palette}>
+        {SYRUPS.map((s) => (
+          <BatchRow
+            key={s.id}
+            label={s.label}
+            madeOn={batches[s.id]}
+            daysLeft={batches[s.id] ? syrupDaysLeft(batches[s.id], s.shelfDays, today) : null}
+            onLog={() => onLogBatch(s.id)}
+            palette={palette}
+          />
+        ))}
+      </Group>
+      <AlertsToggle palette={palette} />
     </div>
   );
 }
@@ -705,5 +743,94 @@ function Toggle({ label, active, onClick, palette }: { label: string; active: bo
       <span>{label}</span>
       <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase' }}>{active ? "86'd" : 'available'}</span>
     </button>
+  );
+}
+
+// The phone's own calendar day (San Diego), as YYYY-MM-DD
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const shortDate = (iso: string) =>
+  new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toLowerCase();
+
+// One row per syrup: when the batch was made, how long it has left, and a
+// tap to log a fresh one today. The 9am reminder reads the same dates.
+function BatchRow({ label, madeOn, daysLeft, onLog, palette }: {
+  label: string; madeOn?: string; daysLeft: number | null; onLog: () => void; palette: any;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const urgent = daysLeft !== null && daysLeft <= 1;
+  const status =
+    daysLeft === null ? 'no batch logged'
+    : daysLeft < 0 ? `expired ${-daysLeft}d ago`
+    : daysLeft === 0 ? 'expires today'
+    : daysLeft === 1 ? 'expires tomorrow'
+    : `${daysLeft} days left`;
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', padding: '9px 10px 9px 14px', background: urgent ? palette.accent + '11' : '#fff', border: `1px solid ${urgent ? palette.accent : palette.bg + '22'}`, borderRadius: '2px' }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: '13px', color: palette.bg }}>{label}</div>
+        <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: urgent ? palette.accent : palette.surface, opacity: urgent ? 1 : 0.6, marginTop: '3px' }}>
+          {madeOn ? `made ${shortDate(madeOn)} · ` : ''}{status}
+        </div>
+      </div>
+      <button
+        onClick={() => {
+          if (!confirming) { setConfirming(true); setTimeout(() => setConfirming(false), 2500); return; }
+          setConfirming(false);
+          onLog();
+        }}
+        style={{ flexShrink: 0, background: confirming ? palette.bg : 'transparent', color: confirming ? palette.cream : palette.bg, border: `1px solid ${palette.bg}55`, borderRadius: '2px', padding: '7px 10px', fontFamily: "'Geist Mono', monospace", fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', cursor: 'pointer', whiteSpace: 'nowrap' }}
+      >
+        {confirming ? 'made today?' : 'new batch'}
+      </button>
+    </div>
+  );
+}
+
+// "Order alerts on this phone" — opts this device in as the bartender:
+// new orders + the morning syrup reminder.
+function AlertsToggle({ palette }: { palette: any }) {
+  const [status, setStatus] = useState<PushStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => { getPushStatus().then(setStatus); }, []);
+  if (status === null) return null;
+
+  const on = status === 'barista';
+  const toggle = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      if (on) await disablePush();
+      else await enablePush('barista');
+      setStatus(await getPushStatus());
+    } catch {
+      setError('couldn’t turn on alerts — check notification settings for daizu');
+    }
+    setBusy(false);
+  };
+
+  const note =
+    status === 'unsupported' ? 'add daizu to your home screen to get alerts'
+    : status === 'denied' ? 'notifications are blocked — allow them in iOS settings › daizu'
+    : on ? 'new orders + syrup reminders come to this phone'
+    : 'get a ping when an order comes in';
+
+  return (
+    <Group label="alerts" palette={palette}>
+      <button
+        onClick={toggle}
+        disabled={busy || status === 'unsupported' || status === 'denied'}
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 14px', background: on ? palette.bg : '#fff', border: `1px solid ${on ? palette.bg : palette.bg + '22'}`, borderRadius: '2px', color: on ? palette.cream : palette.bg, fontFamily: "'Manrope', sans-serif", fontSize: '13px', cursor: 'pointer', textAlign: 'left', opacity: busy ? 0.6 : 1 }}
+      >
+        <span>order alerts on this phone</span>
+        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: on ? palette.brass : palette.bg }}>{on ? 'on' : 'off'}</span>
+      </button>
+      <p style={{ fontSize: '12px', color: error ? palette.accent : palette.surface, opacity: error ? 1 : 0.7, fontStyle: 'italic', margin: '2px 0 0' }}>{error || note}</p>
+    </Group>
   );
 }
