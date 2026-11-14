@@ -428,4 +428,56 @@ alter table public.daizu_orders add column if not exists nudges integer not null
 --         or (nudges = 1 and created_at <= now() - interval '8 minutes')));
 -- $job$);
 
+
+-- ---------------------------------------------------------------------
+-- 13. BEANS LOGBOOK (2026-11-13)
+--     daizu_beans = one row per bag; exactly one can be in_hopper.
+--     next_step = the open thread (JSON {text, grind?, dose?, yield?})
+--     carried until the next shot is logged.
+--     daizu_shots = every shot, hand-logged or from a cafe order (order_id).
+--     is_recipe marks the bag's recipe shot (one per bag, kept by the app).
+--     Brew temperature is fixed on the machine, so there is no temp column.
+-- ---------------------------------------------------------------------
+
+create table if not exists public.daizu_beans (
+  id           bigint generated always as identity primary key,
+  name         text        not null,
+  roaster      text,
+  roast_date   date,
+  bag_grams    integer     not null default 340,
+  note         text,
+  in_hopper    boolean     not null default false,
+  opened_on    date,
+  finished_on  date,
+  next_step    text,
+  created_at   timestamptz not null default now()
+);
+create unique index if not exists daizu_beans_one_in_hopper on public.daizu_beans (in_hopper) where in_hopper;
+
+create table if not exists public.daizu_shots (
+  id                bigint generated always as identity primary key,
+  bean_id           bigint      not null references public.daizu_beans(id) on delete cascade,
+  order_id          bigint      references public.daizu_orders(id) on delete set null,
+  pulled_at         timestamptz not null default now(),
+  grind             numeric,
+  dose_g            numeric     not null default 18,
+  beans_in_g        numeric,
+  yield_g           numeric,
+  seconds           integer,
+  pressure_seconds  integer,
+  after_eco         boolean     not null default false,
+  taste             text check (taste in ('sour', 'balanced', 'bitter')),
+  body              text check (body in ('thin', 'right', 'heavy')),
+  is_recipe         boolean     not null default false,
+  note              text
+);
+create index if not exists daizu_shots_bean_idx on public.daizu_shots (bean_id, pulled_at desc);
+
+alter table public.daizu_beans enable row level security;
+alter table public.daizu_shots enable row level security;
+drop policy if exists public_read_beans on public.daizu_beans;
+create policy public_read_beans on public.daizu_beans for select using (true);
+drop policy if exists public_read_shots on public.daizu_shots;
+create policy public_read_shots on public.daizu_shots for select using (true);
+
 -- =====================================================================

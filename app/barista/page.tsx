@@ -20,6 +20,9 @@ import {
 import { timeAgo } from '@/lib/time';
 import { currentEndpoint, disablePush, enablePush, getPushStatus, type PushStatus } from '@/lib/push';
 import { useViewport } from '@/lib/useViewport';
+import { BeansTab } from '@/components/beans/BeansTab';
+
+type Tab = 'queue' | 'order' | 'beans' | 'more';
 
 type OutOfStock = { drinks: string[]; milks: string[]; syrups: string[] };
 
@@ -210,14 +213,23 @@ export default function BaristaHubPage() {
   const palette = COLORS.cafe;
   const viewport = useViewport();
   const isTablet = viewport === 'tablet';
-  const [tab, setTab] = useState<'queue' | 'order' | 'stats' | 'settings'>('queue');
+  const [tab, setTabState] = useState<Tab>('queue');
+  // Keep the tab in the URL so "back" from a beans screen returns to it
+  const setTab = (t: Tab) => {
+    setTabState(t);
+    try { window.history.replaceState(null, '', t === 'queue' ? '/barista' : `/barista?tab=${t}`); } catch {}
+    window.scrollTo(0, 0);
+  };
   const [orders, setOrders] = useState<Order[]>([]);
   const [outOfStock, setOutOfStock] = useState<OutOfStock>({ drinks: [], milks: [], syrups: [] });
   const [batches, setBatches] = useState<Record<string, string>>({});
 
-  // Deep link from a syrup reminder: /barista?tab=settings
+  // Deep links: ?tab=beans (bean alerts, beans screens), ?tab=settings or
+  // ?tab=more (the syrup reminder; settings now live under "more")
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('tab') === 'settings') setTab('settings');
+    const t = new URLSearchParams(window.location.search).get('tab');
+    if (t === 'beans' || t === 'order' || t === 'more') setTabState(t);
+    else if (t === 'settings' || t === 'stats') setTabState('more');
   }, []);
 
   useEffect(() => {
@@ -255,7 +267,10 @@ export default function BaristaHubPage() {
     });
   };
 
-  const active = orders.filter((o) => o.status !== 'ready' && o.status !== 'cancelled');
+  // Oldest first: whoever has waited longest is at the top
+  const active = orders
+    .filter((o) => o.status !== 'ready' && o.status !== 'cancelled')
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
 
   const deleteOrder = async (id: number) => {
     await fetch(`/api/orders/${id}`, { method: 'DELETE' });
@@ -294,71 +309,85 @@ export default function BaristaHubPage() {
     });
   };
 
-  const tabs = [
-    { id: 'queue'    as const, label: active.length > 0 ? `queue · ${active.length}` : 'queue' },
-    { id: 'order'    as const, label: 'order' },
-    { id: 'stats'    as const, label: 'stats' },
-    { id: 'settings' as const, label: 'settings' },
+  const tabs: { id: Tab; label: string; badge?: number }[] = [
+    { id: 'queue', label: 'queue', badge: active.length },
+    { id: 'order', label: 'order' },
+    { id: 'beans', label: 'beans' },
+    { id: 'more', label: 'more' },
   ];
 
   return (
     <div style={{ minHeight: '100vh', background: palette.cream, color: palette.bg, width: '100%' }}>
-      <div style={{ minHeight: '100vh', fontFamily: "'Manrope', sans-serif", maxWidth: isTablet ? '1200px' : '480px', margin: '0 auto', width: '100%' }}>
+      <div style={{ minHeight: '100vh', fontFamily: "'Manrope', sans-serif", maxWidth: isTablet ? '1200px' : '480px', margin: '0 auto', width: '100%', paddingBottom: 'calc(84px + env(safe-area-inset-bottom, 0px))' }}>
 
-        {/* Header */}
-        <div style={{ background: palette.bg, color: palette.cream, padding: '16px 20px 12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Logo size={28} color={palette.brass} stroke={6} />
-              <span style={{ fontFamily: "'Fraunces', serif", fontSize: '20px', fontWeight: 300, letterSpacing: '-0.02em' }}>
-                daizu
-              </span>
-              <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.25em', color: palette.brass, textTransform: 'uppercase' }}>
-                bartender
-              </span>
-            </div>
-            <button
-              onClick={() => router.push('/')}
-              style={{ background: 'transparent', border: `1px solid ${palette.brass}66`, color: palette.brass, fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.15em', padding: '5px 9px', borderRadius: '2px', textTransform: 'uppercase', cursor: 'pointer' }}
-            >
-              ← exit
-            </button>
+        {/* Header: the tabs live in the bottom bar now */}
+        <div style={{ background: palette.bg, color: palette.cream, padding: '14px 20px', paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Logo size={26} color={palette.brass} stroke={6} />
+            <span style={{ fontFamily: "'Fraunces', serif", fontSize: '20px', fontWeight: 300, letterSpacing: '-0.02em' }}>
+              daizu
+            </span>
+            <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.25em', color: palette.brass, textTransform: 'uppercase' }}>
+              {tab === 'queue' ? 'bartender' : tab}
+            </span>
           </div>
-
-          {/* Segmented tab control */}
-          <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: '12px', padding: '3px', display: 'flex', gap: '2px' }}>
-            {tabs.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                style={{
-                  flex: 1, padding: '9px 4px', borderRadius: '10px',
-                  background: tab === t.id ? palette.brass : 'transparent',
-                  color: tab === t.id ? palette.bg : `${palette.brass}77`,
-                  border: 'none', cursor: 'pointer',
-                  fontFamily: "'Geist Mono', monospace",
-                  fontSize: '9px', letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  fontWeight: tab === t.id ? 600 : 400,
-                  transition: 'background 200ms ease, color 200ms ease',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+          <button
+            onClick={() => router.push('/')}
+            style={{ background: 'transparent', border: `1px solid ${palette.brass}66`, color: palette.brass, fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.15em', padding: '0 12px', minHeight: '36px', borderRadius: '2px', textTransform: 'uppercase', cursor: 'pointer' }}
+          >
+            ← exit
+          </button>
         </div>
 
         {tab === 'queue' && (
           <QueueBody active={active} palette={palette} onPick={(id) => router.push(`/barista/order/${id}`)} onReady={readyOrder} onDelete={deleteOrder} onClearAll={clearAll} />
         )}
         {tab === 'order' && <OrderBody palette={palette} isTablet={isTablet} />}
-        {tab === 'stats' && <StatsBody orders={orders} palette={palette} />}
-        {tab === 'settings' && (
-          <SettingsBody outOfStock={outOfStock} onToggle={toggleStock} batches={batches} onLogBatch={logBatch} palette={palette} />
+        {tab === 'beans' && <BeansTab />}
+        {tab === 'more' && (
+          <>
+            <StatsBody palette={palette} />
+            <SettingsBody outOfStock={outOfStock} onToggle={toggleStock} batches={batches} onLogBatch={logBatch} palette={palette} />
+          </>
         )}
       </div>
+
+      {/* Bottom tab bar: one-handed at the machine */}
+      <nav
+        style={{
+          position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 40,
+          background: palette.bg, borderTop: '1px solid #00000033',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)',
+        }}
+      >
+        <div style={{ maxWidth: isTablet ? '720px' : '480px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', padding: '4px 8px' }}>
+          {tabs.map((t) => {
+            const on = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                aria-current={on ? 'page' : undefined}
+                style={{
+                  minHeight: '56px', background: 'transparent', border: 'none', cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  fontFamily: "'Geist Mono', monospace", fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase',
+                  color: on ? palette.brass : `${palette.brass}88`, fontWeight: on ? 600 : 400,
+                }}
+              >
+                <i style={{ width: '22px', height: '3px', borderRadius: '2px', background: on ? palette.brass : 'transparent' }} />
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {t.label}
+                  {!!t.badge && (
+                    <span style={{ minWidth: '18px', padding: '1px 5px', borderRadius: '9px', background: palette.accent, color: '#fff', fontSize: '10px', letterSpacing: 0, fontWeight: 600 }}>{t.badge}</span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
@@ -673,26 +702,35 @@ function QueueBody({ active, palette, onPick, onReady, onDelete, onClearAll }: {
 // ─────────────────────────────────────────────────────────────────────────────
 // StatsBody (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
-function StatsBody({ orders, palette }: { orders: Order[]; palette: any }) {
-  const total = orders.length;
-  const drinkCounts = orders.reduce<Record<string, number>>((acc, o) => { acc[o.drink] = (acc[o.drink] || 0) + 1; return acc; }, {});
-  const topDrink = Object.entries(drinkCounts).sort((a, b) => b[1] - a[1])[0];
-  const milkCounts = orders.reduce<Record<string, number>>((acc, o) => { if (o.milk) acc[o.milk] = (acc[o.milk] || 0) + 1; return acc; }, {});
-  const tempCounts = orders.reduce<Record<string, number>>((acc, o) => { acc[o.temp] = (acc[o.temp] || 0) + 1; return acc; }, {});
+type Stats = {
+  made: number; firstOrder: string | null; busiest: { day: string; drinks: number } | null;
+  favorite: { drink: string; count: number } | null; hot: number; iced: number; cocktails: number;
+  milks: Record<string, number>; kisses: number;
+};
+
+// All time, from GET /api/stats. "Made" means marked ready.
+function StatsBody({ palette }: { palette: any }) {
+  const [st, setSt] = useState<Stats | null>(null);
+  useEffect(() => {
+    fetch('/api/stats', { cache: 'no-store' }).then((r) => r.json()).then((d) => d.made != null && setSt(d)).catch(() => {});
+  }, []);
+  const md = (iso: string) => new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toLowerCase();
 
   return (
-    <div style={{ padding: '20px', color: palette.bg }}>
-      <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '30px', margin: '0 0 28px', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-        you&apos;ve made<br /><span style={{ color: palette.surface }}>{total} drinks.</span>
+    <div style={{ padding: '20px 20px 0', color: palette.bg }}>
+      <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '30px', margin: '0 0 20px', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+        you&apos;ve made<br /><span style={{ color: palette.surface }}>{st ? st.made : '…'} drinks.</span>
       </h2>
-      <StatRow label="favorite drink" value={topDrink ? `${topDrink[0].toLowerCase()} · ${topDrink[1]}×` : '—'} palette={palette} />
-      <StatRow label="hot vs iced"    value={`${tempCounts.hot || 0} hot · ${tempCounts.iced || 0} iced`} palette={palette} />
-      <StatRow label="milk preference" value={Object.entries(milkCounts).map(([k, v]) => `${k} ${v}×`).join(' · ') || '—'} palette={palette} />
-      <StatRow label="vanilla syrups poured" value={`${orders.filter((o) => o.syrups?.includes('vanilla')).length}`} palette={palette} />
-      <StatRow label="kisses received" value={`${orders.filter((o) => /kiss|love|♡/i.test(o.notes || '')).length} ♡`} palette={palette} />
-      <p style={{ marginTop: '32px', textAlign: 'center', fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.2em', color: palette.surface, opacity: 0.5, textTransform: 'uppercase' }}>
-        — keep it up, bartender —
-      </p>
+      {st && (
+        <>
+          <StatRow label="first order" value={st.firstOrder ? md(st.firstOrder) : '—'} palette={palette} />
+          <StatRow label="busiest night" value={st.busiest ? `${md(st.busiest.day)} · ${st.busiest.drinks}` : '—'} palette={palette} />
+          <StatRow label="favorite drink" value={st.favorite ? `${st.favorite.drink.toLowerCase()} · ${st.favorite.count}×` : '—'} palette={palette} />
+          <StatRow label="hot · iced · cocktails" value={`${st.hot} · ${st.iced} · ${st.cocktails}`} palette={palette} />
+          <StatRow label="milk preference" value={Object.entries(st.milks).map(([k, v]) => `${k} ${v}×`).join(' · ') || '—'} palette={palette} />
+          <StatRow label="kisses received" value={`${st.kisses} ♡`} palette={palette} />
+        </>
+      )}
     </div>
   );
 }
@@ -707,7 +745,7 @@ function StatRow({ label, value, palette }: { label: string; value: string; pale
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SettingsBody (unchanged)
+// SettingsBody
 // ─────────────────────────────────────────────────────────────────────────────
 function SettingsBody({ outOfStock, onToggle, batches, onLogBatch, palette }: {
   outOfStock: OutOfStock; onToggle: (category: 'drinks' | 'milks' | 'syrups', id: string) => void;
@@ -715,11 +753,14 @@ function SettingsBody({ outOfStock, onToggle, batches, onLogBatch, palette }: {
 }) {
   const today = localToday();
   return (
-    <div style={{ padding: '20px', color: palette.bg }}>
+    <div style={{ padding: '32px 20px 20px', color: palette.bg }}>
       <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '26px', margin: '0 0 6px', letterSpacing: '-0.02em' }}>what&apos;s 86&apos;d today?</h2>
       <p style={{ fontSize: '12px', color: palette.surface, opacity: 0.7, fontStyle: 'italic', margin: '0 0 24px' }}>tap to hide from the menu</p>
-      <Group label="drinks" palette={palette}>
+      <Group label="coffee" palette={palette}>
         {DRINKS.map((d) => <Toggle key={d.name} label={d.name.toLowerCase()} active={outOfStock.drinks.includes(d.name)} onClick={() => onToggle('drinks', d.name)} palette={palette} />)}
+      </Group>
+      <Group label="cocktails" palette={palette}>
+        {COCKTAILS.map((c) => <Toggle key={c.name} label={c.name.toLowerCase()} active={outOfStock.drinks.includes(c.name)} onClick={() => onToggle('drinks', c.name)} palette={palette} />)}
       </Group>
       <Group label="milks" palette={palette}>
         {MILKS.map((m) => <Toggle key={m.id} label={m.label} active={outOfStock.milks.includes(m.id)} onClick={() => onToggle('milks', m.id)} palette={palette} />)}

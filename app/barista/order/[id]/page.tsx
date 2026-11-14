@@ -15,6 +15,8 @@ import {
   STRENGTH_TO_OZ,
 } from '@/lib/menu';
 import { timeAgo } from '@/lib/time';
+import { dayOff, fmtG, fmtGrind, recipeOf, type Advice, type Bean, type Shot } from '@/lib/beans';
+import { RecipeTiles } from '@/components/beans/ui';
 
 export default function BaristaOrderPage({
   params,
@@ -38,6 +40,24 @@ export default function BaristaOrderPage({
 
   const [gone, setGone] = useState(false);
   const [marking, setMarking] = useState(false);
+  // The bag in the hopper and its recipe (coffee orders only)
+  const [bag, setBag] = useState<Bean | null>(null);
+  const [recipe, setRecipe] = useState<Shot | null>(null);
+  const [shotSecs, setShotSecs] = useState<number | null>(null);
+  const [timeOpen, setTimeOpen] = useState(false);
+  const [advice, setAdvice] = useState<Advice | null>(null);
+  useEffect(() => {
+    fetch('/api/beans', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.hopper) return;
+        setBag(d.hopper);
+        const r = recipeOf(d.shots ?? []);
+        setRecipe(r);
+        if (r?.seconds != null) setShotSecs(r.seconds);
+      })
+      .catch(() => {});
+  }, []);
 
   // Opening the order is "I've seen it": a new order moves to brewing by
   // itself, so the customer's second dot lights up and there's no start
@@ -104,6 +124,8 @@ export default function BaristaOrderPage({
     );
   }
 
+  const beanRecipe = isCocktail ? null : recipe;
+
   // How many of this drink — drives the recipe-scaling hints below.
   // Defaults to 1 (no scaling) for anything without an explicit quantity.
   const quantity = order.quantity && order.quantity > 1 ? order.quantity : 1;
@@ -130,8 +152,13 @@ export default function BaristaOrderPage({
     steps = cocktailRecipe.steps;
   } else {
     const recipe = RECIPES[order.drink] || RECIPES.LATTE;
+    const bagRecipe = beanRecipe;
     const oz = PUMPS_TO_OZ[order.sweetness] || '½ oz';
-    const baseIngredients = recipe.base.map((ing) => {
+    const shotLine = bagRecipe
+      ? `double shot · grind ${fmtGrind(bagRecipe.grind)} · ${fmtG(bagRecipe.dose_g)}g in · ${fmtG(bagRecipe.yield_g)}g out${bagRecipe.seconds != null ? ` · ${bagRecipe.seconds}s` : ''}`
+      : null;
+    const baseIngredients = recipe.base.map((ing, i) => {
+      if (i === 0 && shotLine && ing.startsWith('double shot')) return shotLine;
       if (order.milk && ing.includes('milk')) {
         const milkPrefix = order.temp === 'iced' ? 'cold ' : '';
         return ing.replace('milk', `${milkPrefix}${order.milk} milk`);
@@ -150,13 +177,19 @@ export default function BaristaOrderPage({
     if (marking) return;
     setMarking(true);
     try {
-      const res = await fetch(`/api/orders/${id}/ready`, { method: 'POST' });
+      const res = await fetch(`/api/orders/${id}/ready`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(recipe && !isCocktail && shotSecs != null ? { seconds: shotSecs } : {}),
+      });
       if (res.status === 404) { setGone(true); return; }
       const data = await res.json();
       if (data.order) {
         setOrder(data.order);
         setReadyPhrase({ jp: data.order.ready_phrase_jp, en: data.order.ready_phrase_en });
-        setTimeout(() => router.push('/barista'), 2400);
+        if (data.advice) setAdvice(data.advice);
+        // Longer when there's advice for the next shot to read
+        setTimeout(() => router.push('/barista'), data.advice ? 6000 : 2400);
       }
     } finally {
       setMarking(false);
@@ -208,6 +241,19 @@ export default function BaristaOrderPage({
     </div>
   );
 
+  const bagBlock = !isCocktail && bag ? (
+    <div style={{ marginBottom: '20px', background: '#fff', border: `1px solid ${palette.bg}14`, borderRadius: '14px', padding: '14px' }}>
+      <p style={{ margin: '0 0 6px', fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: '#8A6D3B' }}>
+        {[bag.name.toLowerCase(), dayOff(bag) != null ? `day ${dayOff(bag)}` : null, recipe ? 'recipe' : 'no recipe yet'].filter(Boolean).join(' · ')}
+      </p>
+      {recipe ? (
+        <RecipeTiles grind={recipe.grind} dose={recipe.dose_g} yieldG={recipe.yield_g} seconds={recipe.seconds} />
+      ) : (
+        <p style={{ margin: 0, fontSize: '13px', color: `${palette.bg}99` }}>Save a balanced shot as the recipe on the beans tab, and it shows here.</p>
+      )}
+    </div>
+  ) : null;
+
   const scaleBannerBlock = quantity > 1 ? (
     <div style={{ marginBottom: '16px', padding: '12px 16px', background: palette.accent, color: palette.cream, borderRadius: '12px', fontFamily: "'Geist Mono', monospace", fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
       making {quantity} — scale each line ×{quantity}
@@ -257,6 +303,35 @@ export default function BaristaOrderPage({
         borderTop: `0.5px solid ${palette.bg}1A`,
       }}
     >
+      {!isCocktail && recipe && shotSecs != null && (
+        <div style={{ maxWidth: isTablet ? '560px' : '448px', margin: '0 auto 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+          {!timeOpen ? (
+            <button
+              onClick={() => setTimeOpen(true)}
+              style={{ minHeight: '40px', padding: '0 16px', borderRadius: '20px', border: `1px dashed ${palette.bg}55`, background: 'transparent', color: palette.bg, fontFamily: "'Geist Mono', monospace", fontSize: '11px', letterSpacing: '0.08em', cursor: 'pointer' }}
+            >
+              shot ran {shotSecs}s · change
+            </button>
+          ) : (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'auto 48px 84px 48px', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: `${palette.bg}99` }}>shot ran</span>
+                <button aria-label="one second less" onClick={() => setShotSecs((v) => Math.max(1, (v ?? 0) - 1))} style={stepBtn(palette)}>−</button>
+                <span style={{ fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '26px', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+                  {shotSecs}<small style={{ fontSize: '13px', fontFamily: "'Manrope', sans-serif", opacity: 0.6, marginLeft: '2px' }}>s</small>
+                </span>
+                <button aria-label="one second more" onClick={() => setShotSecs((v) => (v ?? 0) + 1)} style={stepBtn(palette)}>+</button>
+              </div>
+              <button
+                onClick={() => router.push(`/barista/shot?order=${order.id}&s=${shotSecs}`)}
+                style={{ background: 'transparent', border: 'none', padding: '6px', color: `${palette.bg}88`, fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer' }}
+              >
+                ran off in another way? log the whole shot →
+              </button>
+            </>
+          )}
+        </div>
+      )}
       <button
         onClick={markReady}
         disabled={marking}
@@ -334,7 +409,7 @@ export default function BaristaOrderPage({
     <div
       style={{
         minHeight: '100vh',
-        paddingBottom: '120px',
+        paddingBottom: '200px',
         fontFamily: "'Manrope', sans-serif",
         maxWidth: isLargeTablet ? '1300px' : isTablet ? '900px' : '480px',
         margin: '0 auto',
@@ -346,6 +421,7 @@ export default function BaristaOrderPage({
           {/* LEFT: order info + ingredients */}
           <div>
             {orderInfoBlock}
+            {bagBlock}
             {scaleBannerBlock}
             {ingredientsBlock}
           </div>
@@ -358,6 +434,7 @@ export default function BaristaOrderPage({
         /* single-column layout for phone/small tablet */
         <div style={{ padding: '20px' }}>
           {orderInfoBlock}
+          {bagBlock}
           {scaleBannerBlock}
           {ingredientsBlock}
           {recipeBlock}
@@ -449,6 +526,12 @@ export default function BaristaOrderPage({
                 {readyPhrase.en}
               </span>
             </p>
+            {advice && (
+              <p style={{ margin: '10px 0 0', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.15)', fontSize: '13px', lineHeight: 1.4 }}>
+                {advice.text}
+                {advice.next && <span style={{ display: 'block', fontSize: '11px', opacity: 0.65, marginTop: '4px' }}>Saved for the next shot on the beans tab.</span>}
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -506,6 +589,11 @@ function scaleHint(line: string, mult: number): string | null {
   if (COUNT_UNITS.includes(unit)) return formatQty(scaled); // number only — line already says the unit
   return null; // unknown/ambiguous unit ("large", "sugar", "coffee", "") → no hint
 }
+
+const stepBtn = (palette: any): React.CSSProperties => ({
+  height: '48px', borderRadius: '12px', border: `1px solid ${palette.bg}33`, background: 'transparent',
+  fontSize: '22px', color: palette.bg, cursor: 'pointer',
+});
 
 function Section({
   title,
