@@ -376,3 +376,36 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
     ],
   },
 };
+
+// The "ready" phrases: one is picked at random when the bartender taps ready.
+// romaji is shown with the meaning, on the confirm screen and in the push,
+// because the reading is the point.
+export type ReadyPhrase = { jp: string; romaji: string; en: string };
+
+export const CAFE_READY_PHRASES: ReadyPhrase[] = [
+  { jp: 'おまたせしました', romaji: 'omatase shimashita', en: 'sorry to keep you waiting' },
+  { jp: 'どうぞ',           romaji: 'dōzo',               en: 'here you go' },
+  { jp: '召し上がれ',       romaji: 'meshiagare',         en: 'please enjoy' },
+  { jp: 'できました',       romaji: 'dekimashita',        en: "it's ready" },
+];
+
+export const BAR_READY_PHRASES: ReadyPhrase[] = [
+  { jp: '乾杯',             romaji: 'kanpai',             en: 'cheers' },
+  { jp: 'どうぞ',           romaji: 'dōzo',               en: 'here you go' },
+  { jp: 'お楽しみください', romaji: 'o-tanoshimi kudasai', en: 'please enjoy' },
+  { jp: 'できました',       romaji: 'dekimashita',        en: "it's ready" },
+];
+
+export function pickReadyPhrase(category: 'cafe' | 'bar' = 'cafe'): ReadyPhrase {
+  const pool = category === 'bar' ? BAR_READY_PHRASES : CAFE_READY_PHRASES;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/** "meshiagare · please enjoy" for a stored phrase (older orders too). */
+export function phraseLine(jp?: string | null, en?: string | null): string {
+  const romaji = [...CAFE_READY_PHRASES, ...BAR_READY_PHRASES].find((p) => p.jp === jp)?.romaji;
+  const meaning = (en || '').replace(/!$/, '');
+  if (!romaji) return meaning || 'ready';
+  if (!meaning || meaning.toLowerCase() === romaji) return `${romaji} · cheers`;
+  return `${romaji} · ${meaning}`;
+}

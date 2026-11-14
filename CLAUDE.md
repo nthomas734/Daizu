@@ -13,7 +13,7 @@ npx tsc --noEmit # typecheck (tsconfig has noEmit + strict)
 
 There is **no test setup and no linter** in this repo — no test runner, no test files, no `lint` script, no ESLint config. Do not invent test or lint commands; if verification is needed, use `npm run build` / `npx tsc --noEmit`.
 
-Deployment is Vercel (auto-deploy on push to GitHub). The README is written for a non-technical operator and assumes zero local tooling — schema changes are applied by pasting SQL into the Supabase dashboard SQL Editor, not by a migration CLI.
+Deployment is Vercel (auto-deploy on push to GitHub). The README is written for a non-technical operator and assumes zero local tooling — schema changes are applied through the Supabase dashboard (or connector), not by a migration CLI. **`SCHEMA-SYNC.sql` is the true schema**: every schema change gets added there as a numbered section. The files under `supabase/` are out of date.
 
 ## Environment variables
 
@@ -21,13 +21,13 @@ Set in Vercel (changes require a redeploy to take effect):
 
 - `DAIZU_PASSWORD` — the single shared site password
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`
-- `PUSHOVER_APP_TOKEN`, `PUSHOVER_BARISTA_KEY`, `PUSHOVER_CUSTOMER_KEY` — legacy; only used as a fallback when no device of the target role is on web push (see below). Safe to delete once both phones are opted in.
+- `PUSHOVER_APP_TOKEN`, `PUSHOVER_BARISTA_KEY`, `PUSHOVER_CUSTOMER_KEY` — legacy; only used as a fallback when no device of the target role is on web push (see below). To retire once Dez's phone is opted in (review A7): delete `sendPushover` and its calls, then the three env vars. The ready phrases already live in `lib/menu.ts`.
 
 Web push needs **no** Vercel env vars: the VAPID public key is a constant in `lib/push.ts`, the private key is in Supabase Vault (`daizu_vapid_private`, read through the service-role-only RPC `daizu_vapid_private()`).
 
 ## What this is
 
-A private two-person home cafe/bar PWA. One person (the customer) orders a coffee or cocktail from a split-flap menu board; the other (the barista/bartender) gets a push notification, works the queue, and taps "ready", which pushes a Japanese phrase back to the customer. Next.js 15 App Router + React 19, Supabase for storage, Web Push for notifications (Pushover as legacy fallback).
+A private two-person home cafe/bar PWA. One person (the customer) orders a coffee or cocktail from a split-flap menu board; the other (the barista/bartender) gets a push notification, works the queue, and taps "ready", which pushes a Japanese phrase back to the customer. Next.js 15 App Router + React 19, Supabase for storage, Web Push for notifications (Pushover as legacy fallback). The bartender side also keeps a beans logbook (see below).
 
 ## Auth model — `middleware.ts`
 
@@ -35,35 +35,40 @@ Auth is a single shared password behind a cookie gate, not Supabase Auth. There 
 
 `middleware.ts` runs on every request (matcher excludes only `_next/static`, `_next/image`, `favicon.ico`). It allow-lists `/auth`, `/api/auth`, `/manifest.json`, and `/icon-*` so the login page and PWA shell can load unauthenticated. Everything else requires the `daizu_auth` cookie to equal the literal constant `AUTH_COOKIE_VALUE` (`'admit_one'`); otherwise it redirects to `/auth?next=<original path>`. `POST /api/auth` compares the submitted password to `DAIZU_PASSWORD` and, on match, sets that httpOnly cookie with a one-year max-age. Cookie name/value/TTL constants live in `lib/auth.ts` and are shared by both middleware and the route — change them there, never inline.
 
-Consequence: the barista hub at `/barista` is *not* separately protected. It is only "hidden" behind a 350ms long-press on a nearly invisible brass dot in the bottom-right of the menu screen (`BaristaDot` in `app/page.tsx`). The README describes this as a triple-tap; the code is a long-press.
+Consequence: the barista hub at `/barista` is *not* separately protected. It is only "hidden" behind a 350ms long-press on a nearly invisible brass dot in the bottom-right of the menu screen (`BaristaDot` in `app/page.tsx`).
 
 ## Data flow
 
 All database access goes through Next API routes using `supabaseAdmin()` (service-role key, RLS bypassed). The browser never talks to Supabase directly — `lib/supabase.ts` also exports an anon-key `supabase` client, but **nothing currently imports it**. Client pages fetch `/api/*` with `cache: 'no-store'`.
 
-There are no websockets/realtime subscriptions; status updates come from **polling**: the barista queue polls `/api/orders` every 4s, the customer confirm screen polls `/api/orders/[id]` every 3s.
+There are no websockets/realtime subscriptions; status updates come from **polling**: the barista queue polls `/api/orders` every 4s (and sets the icon badge to the open count), the customer confirm screen polls `/api/orders/[id]` every 3s. A 404 on either side means the order was cancelled or cleared, and both screens say so.
 
 Order lifecycle:
 
-1. `/` menu → `/customize/[drink]` → `POST /api/orders` inserts the row (status `received`) and fires a Pushover to `barista`. If `saveAsFav` is set, it also inserts a favorites row in the same handler — there is no favorites POST endpoint, and no favorites delete.
-2. Client redirects to `/confirm/[id]`, which polls for status.
-3. Barista opens `/barista/order/[id]` → `PATCH /api/orders/[id]/status` advances to `brewing` (that route accepts only `received`/`brewing`/`cancelled`).
-4. "Ready for pickup" hits `POST /api/orders/[id]/ready` — a dedicated route because it does more than a status change: it reads the order's category, picks a random phrase via `pickReadyPhrase(category)` (separate cafe/bar phrase pools in `lib/pushover.ts`), persists `ready_phrase_jp`/`ready_phrase_en` + `ready_at`, and pushes to `customer`.
+1. `/` menu → `/customize/[drink]` → `POST /api/orders` inserts the row (status `received`) and web-pushes every `barista` device except the ordering one (Pushover only if none). If `saveAsFav` is set, it also inserts a favorites row in the same handler. Favorites ("the usual?") are shown only for the name last used on that phone (`localStorage['daizu-name']`); a long-press removes one (`DELETE /api/favorites?id=`).
+2. Client redirects to `/confirm/[id]`, which polls for status. Cancelling there calls `DELETE /api/orders/[id]?by=customer`, which pushes "Dez cancelled the latte" with the order's tag so it replaces the new-order notification.
+3. Opening `/barista/order/[id]` moves a `received` order to `brewing` by itself (`PATCH /api/orders/[id]/status`, which accepts only `received`/`brewing`/`cancelled`). There is no start button. An order still `received` after 3 and 8 minutes pings the bartender again (pg_cron `daizu-waiting` → `/api/notify {kind:'waiting'}`, counted by `daizu_orders.nudges`).
+4. Ready: the bar fixed to the bottom of the order page, the ✓ on a queue card, or a right swipe. All hit `POST /api/orders/[id]/ready`, which is idempotent (a second tap doesn't ping twice), picks a phrase via `pickReadyPhrase(category)` (cafe/bar pools with romaji in `lib/menu.ts`), persists `ready_phrase_jp`/`ready_phrase_en` + `ready_at`, and pushes to the ordering phone. For a cafe order it also logs the shot to the bag in the hopper when that bag has a recipe (body `{seconds}`), and returns `{order, advice}`.
 
 `GET /api/orders` returns only the last 24h. `DELETE /api/orders` clears all non-`ready` orders ("clear all"). `sendPushover` never throws and no-ops with a console warning when tokens are missing, so a misconfigured Pushover degrades silently rather than failing the order.
 
 ## Notifications (web push, added 2026-10-12)
 
 - `daizu_push` — one row per opted-in device (`endpoint` unique, `role` = `barista` | `customer`). Role is also kept in `localStorage['daizu-push-role']` so `RegisterSW` can self-heal the subscription on launch (`syncPushSubscription`).
-- Bartender opts in from hub → settings → "order alerts on this phone". Customer opts in from the confirm screen's "ping me when it's ready" (shown only when this phone isn't subscribed; it also attaches the current order).
+- Bartender opts in from hub → more → "order alerts on this phone". Customer opts in from the confirm screen's "ping me when it's ready" (shown only when this phone isn't subscribed; it also attaches the current order).
 - Every order POST carries `pushEndpoint` (the ordering device, from `currentEndpoint()`), stored as `daizu_orders.push_endpoint`. New-order push → all `barista` devices except that endpoint. Ready push → that endpoint, else all `customer` devices, else Pushover.
-- Syrup batches: `daizu_syrup_batches (syrup_id, made_on)`; shelf life is `shelfDays` on `SYRUPS` in `lib/menu.ts`, `syrupDaysLeft()` does the math. Logged from hub → settings → "syrup batches" (tap "new batch" twice = made today).
-- pg_cron `daizu-syrups` (16:00 UTC ≈ 9am Pacific) POSTs `{kind:'syrups'}` to `/api/notify` with `x-daizu-key` from Vault `daizu_alert_key`; the route checks its sha256. It nags the bartender daily about syrups expiring tomorrow or already expired, skipping any that are 86'd. `{kind:'test', role}` pings every device of a role — fire it via pg_net, not curl (Vercel bot checkpoint). `/api/notify` is allow-listed in `middleware.ts`.
+- Syrup batches: `daizu_syrup_batches (syrup_id, made_on)`; shelf life is `shelfDays` on `SYRUPS` in `lib/menu.ts`, `syrupDaysLeft()` does the math. Logged from hub → more → "syrup batches" (tap "new batch" twice = made today). Logging a batch also un-86s the syrup.
+- pg_cron `daizu-syrups` (16:00 UTC ≈ 9am Pacific) POSTs `{kind:'syrups'}` to `/api/notify` with `x-daizu-key` from Vault `daizu_alert_key`; the route checks its sha256. It reminds the bartender about syrups expiring tomorrow; a syrup past its date 86s itself and the push says so once (the next day it is 86'd and skipped). `{kind:'test', role}` pings every device of a role — fire it via pg_net, not curl (Vercel bot checkpoint). `/api/notify` is allow-listed in `middleware.ts`.
+- Every bartender push carries `badge` (open orders, from `openOrderCount()`); `public/sw.js` sets the icon badge with it.
 - `lib/push-server.ts` is server-only (`runtime = 'nodejs'` on every route that imports it — web-push needs Node crypto). Production URL is `daizu-henna.vercel.app`.
+
+## Beans logbook (added 2026-11-13)
+
+Hub → beans tab. `daizu_beans` (one row per bag; one `in_hopper`; `next_step` holds the open thread as JSON) and `daizu_shots` (every shot, hand-logged or from a cafe order via `order_id`; `is_recipe` marks the bag's recipe). `lib/beans.ts` is pure (bag math, advice rules); `lib/beans-server.ts` writes shots and sends the "about 4 doubles left" push. Screens: `components/beans/BeansTab.tsx`, `/barista/shot`, `/barista/bean`. The advice rules follow his method and are deliberately narrow: one change at a time with the reason, taste decides over time, no channeling diagnosis, no temperature (fixed at 95°C), no milk tracking.
 
 ## Supabase schema vs. the app
 
-`supabase/schema.sql` (run once) creates `orders`, `favorites`, `out_of_stock`; `supabase/migration_bar.sql` (run after) adds bar-mode columns (`category`, `strength`, `quantity`, `spirit`) and relaxes `temp` to nullable for cocktails.
+**`SCHEMA-SYNC.sql` is the true schema and wins over everything below.** `supabase/schema.sql` (run once) creates `orders`, `favorites`, `out_of_stock`; `supabase/migration_bar.sql` (run after) adds bar-mode columns (`category`, `strength`, `quantity`, `spirit`) and relaxes `temp` to nullable for cocktails.
 
 **Naming mismatch to be aware of:** the SQL files create unprefixed table names, but every API route queries `daizu_orders`, `daizu_favorites`, `daizu_out_of_stock`. The live database evidently uses the `daizu_`-prefixed names; the checked-in SQL is out of date on this point. Match the `daizu_`-prefixed names used in code when writing queries, and expect to translate when reading the SQL files.
 

@@ -68,36 +68,48 @@ export async function POST(req: NextRequest) {
   const off = new Set((oos ?? []).map((r) => r.item_id));
   const today = homeToday();
 
-  const expired: string[] = [];
+  // A syrup past its shelf life 86s itself, and the morning push says so
+  // once (the next day it's 86'd, so it's skipped). Logging a new batch
+  // brings it back (POST /api/syrups). "Expires tomorrow" stays a reminder.
+  const expired: { id: string; label: string }[] = [];
   const tomorrow: string[] = [];
   for (const b of batches ?? []) {
     const syrup = SYRUPS.find((s) => s.id === b.syrup_id);
     if (!syrup || off.has(syrup.id)) continue;
     const left = syrupDaysLeft(b.made_on, syrup.shelfDays, today);
-    if (left <= 0) expired.push(syrup.label);
+    if (left <= 0) expired.push({ id: syrup.id, label: syrup.label });
     else if (left === 1) tomorrow.push(syrup.label);
   }
   if (expired.length === 0 && tomorrow.length === 0) {
     return NextResponse.json({ sent: 0, today });
   }
+  if (expired.length) {
+    await sb.from('daizu_out_of_stock').upsert(
+      expired.map((e) => ({ category: 'syrups', item_id: e.id })),
+      { onConflict: 'category,item_id', ignoreDuplicates: true }
+    );
+  }
 
   const list = (xs: string[]) => (xs.length === 1 ? xs[0] : `${xs.slice(0, -1).join(', ')} & ${xs[xs.length - 1]}`);
-  const title = expired.length
-    ? `🫙 ${list(expired)} syrup${expired.length > 1 ? 's' : ''} expired`
+  const gone = expired.map((e) => e.label);
+  const title = gone.length
+    ? `🫙 ${list(gone)} ${gone.length > 1 ? 'are' : 'is'} off the menu`
     : `🫙 ${list(tomorrow)} syrup${tomorrow.length > 1 ? 's expire' : ' expires'} tomorrow`;
-  const lines = [
-    expired.length ? 'time for a fresh batch.' : 'make a new batch tonight?',
-    expired.length && tomorrow.length ? `${list(tomorrow)} expires tomorrow too.` : null,
-    "log it in settings, or 86 it to stop these.",
-  ];
+  const lines = gone.length
+    ? [
+        `${list(gone)} ${gone.length > 1 ? 'are' : 'is'} past ${gone.length > 1 ? 'their' : 'its'} date and off the menu.`,
+        'Log a new batch to bring it back.',
+        tomorrow.length ? `${list(tomorrow)} expires tomorrow.` : null,
+      ]
+    : ['make a new batch tonight?', 'log it in settings, or 86 it to stop these.'];
 
   const sent = await sendToRole('barista', {
     title,
     body: lines.filter(Boolean).join(' '),
-    url: '/barista?tab=settings',
+    url: '/barista?tab=more',
     tag: 'daizu-syrups',
   });
-  return NextResponse.json({ sent, expired, tomorrow, today });
+  return NextResponse.json({ sent, expired: gone, tomorrow, today });
 }
 
 const NUDGE_AT_MIN = [3, 8];

@@ -1,3 +1,5 @@
+-- OUT OF DATE: SCHEMA-SYNC.sql at the repo root is the true schema (daizu_-prefixed
+-- table names, every column the app uses). Use that file, not this one.
 -- Web push + syrup batches (applied to Kura 2026-10-12). Idempotent.
 -- Vault secrets daizu_vapid_private / daizu_alert_key were created
 -- separately with vault.create_secret and are not checked in.

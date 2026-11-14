@@ -2,7 +2,7 @@
 
 import { use, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { COLORS, Order } from '@/lib/menu';
+import { COLORS, Order, phraseLine } from '@/lib/menu';
 import { FlapRow } from '@/components/SplitFlap';
 import { enablePush, getPushStatus, type PushStatus } from '@/lib/push';
 
@@ -214,7 +214,7 @@ export default function ConfirmPage({
             margin: '8px 0 0',
           }}
         >
-          {isReady ? order.ready_phrase_en || 'ready' : isCocktail ? 'kanpai · cheers' : 'arigatō · thank you'}
+          {isReady ? phraseLine(order.ready_phrase_jp, order.ready_phrase_en) : isCocktail ? 'kanpai · cheers' : 'arigatō · thank you'}
         </p>
       </div>
 

@@ -52,25 +52,5 @@ export async function sendPushover(
   }
 }
 
-// The pool of "ready" phrases — one is picked at random when the barista
-// taps "ready for pickup".
-export const CAFE_READY_PHRASES = [
-  { jp: 'おまたせしました', en: 'sorry to keep you waiting' },
-  { jp: 'どうぞ',           en: 'here you go' },
-  { jp: '召し上がれ',       en: 'please enjoy' },
-  { jp: 'できました',       en: "it's ready" },
-];
-
-export const BAR_READY_PHRASES = [
-  { jp: '乾杯',             en: 'kanpai!' },
-  { jp: 'どうぞ',           en: 'here you go' },
-  { jp: 'お楽しみください', en: 'please enjoy' },
-  { jp: 'できました',       en: "it's ready" },
-];
-
-export const READY_PHRASES = CAFE_READY_PHRASES;
-
-export function pickReadyPhrase(category: 'cafe' | 'bar' = 'cafe') {
-  const pool = category === 'bar' ? BAR_READY_PHRASES : CAFE_READY_PHRASES;
-  return pool[Math.floor(Math.random() * pool.length)];
-}
+// The phrase pools live in lib/menu.ts (the confirm screen reads them too)
+export { pickReadyPhrase, CAFE_READY_PHRASES, BAR_READY_PHRASES } from './menu';

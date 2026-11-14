@@ -60,7 +60,7 @@ export async function POST(
   const message = `your ${qty}${data.drink.toLowerCase()}${data.quantity > 1 ? 's are' : ' is'} ready ${emoji}`;
   const push = {
     title: `${emoji} ${phrase.jp}`,
-    body: `${message} (${phrase.en})`,
+    body: `${message} (${phrase.romaji} · ${phrase.en})`,
     url: `/confirm/${data.id}${isCocktail ? '?from=bar' : ''}`,
     tag: `daizu-ready-${data.id}`,
   };
@@ -71,7 +71,7 @@ export async function POST(
   let pushed = data.push_endpoint ? await sendToEndpoint(data.push_endpoint, push) : 0;
   if (pushed === 0) pushed = await sendToRole('customer', push);
   if (pushed === 0) {
-    await sendPushover('customer', `${phrase.jp}\n${message}\n(${phrase.en})`, { title: `${emoji} daizu` });
+    await sendPushover('customer', `${phrase.jp}\n${message}\n(${phrase.romaji} · ${phrase.en})`, { title: `${emoji} daizu` });
   }
 
   const advice = data.category === 'bar' ? null : await logReadyShot(data, body.seconds);

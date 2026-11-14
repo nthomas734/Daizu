@@ -13,14 +13,17 @@ export async function GET() {
 
 // POST — log a fresh batch. body: { syrupId, madeOn: 'YYYY-MM-DD' }
 // The client sends its own calendar day so "today" is San Diego's, not UTC's.
+// A new batch also un-86s the syrup: one switch, not two.
 export async function POST(req: NextRequest) {
   const { syrupId, madeOn } = await req.json();
   if (!SYRUPS.some((s) => s.id === syrupId) || !/^\d{4}-\d{2}-\d{2}$/.test(madeOn || '')) {
     return NextResponse.json({ error: 'invalid_batch' }, { status: 400 });
   }
-  const { error } = await supabaseAdmin()
+  const sb = supabaseAdmin();
+  const { error } = await sb
     .from('daizu_syrup_batches')
     .upsert({ syrup_id: syrupId, made_on: madeOn, updated_at: new Date().toISOString() });
   if (error) return NextResponse.json({ error: 'save_failed' }, { status: 500 });
+  await sb.from('daizu_out_of_stock').delete().eq('category', 'syrups').eq('item_id', syrupId);
   return NextResponse.json({ ok: true });
 }

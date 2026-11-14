@@ -17,8 +17,9 @@ self.addEventListener('activate', (event) => {
 });
 
 // ── Web push: new orders, "ready" pings, syrup reminders ──
-// Payload is JSON: { title, body, url, tag, renotify? }. iOS requires every push to
-// show a notification, so always call showNotification.
+// Payload is JSON: { title, body, url, tag, renotify?, badge? }. iOS requires every
+// push to show a notification, so always call showNotification. badge = open
+// orders on the bartender's phone (installed PWAs, iOS 16.4+); 0 clears it.
 self.addEventListener('push', (event) => {
   let data = {};
   try {
@@ -26,16 +27,19 @@ self.addEventListener('push', (event) => {
   } catch {
     data = { body: event.data ? event.data.text() : '' };
   }
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'daizu', {
-      body: data.body || '',
-      icon: '/icon-180.png',
-      badge: '/icon-180.png',
-      tag: data.tag || 'daizu',
-      renotify: !!data.renotify,
-      data: { url: data.url || '/' },
-    })
-  );
+  const shown = self.registration.showNotification(data.title || 'daizu', {
+    body: data.body || '',
+    icon: '/icon-180.png',
+    badge: '/icon-180.png',
+    tag: data.tag || 'daizu',
+    renotify: !!data.renotify,
+    data: { url: data.url || '/' },
+  });
+  let badged = Promise.resolve();
+  if (typeof data.badge === 'number' && self.navigator.setAppBadge) {
+    badged = (data.badge > 0 ? self.navigator.setAppBadge(data.badge) : self.navigator.clearAppBadge()).catch(() => {});
+  }
+  event.waitUntil(Promise.all([shown, badged]));
 });
 
 // Tap → straight to the order (or the hub). Reuse an open window if

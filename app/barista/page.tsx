@@ -238,7 +238,13 @@ export default function BaristaHubPage() {
       try {
         const res = await fetch('/api/orders', { cache: 'no-store' });
         const data = await res.json();
-        if (!stop && data.orders) setOrders(data.orders);
+        if (!stop && data.orders) {
+          setOrders(data.orders);
+          // Keep the icon badge honest: open orders, cleared when the queue empties
+          const open = (data.orders as Order[]).filter((o) => o.status === 'received' || o.status === 'brewing').length;
+          const nav = navigator as Navigator & { setAppBadge?: (n: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
+          (open > 0 ? nav.setAppBadge?.(open) : nav.clearAppBadge?.())?.catch(() => {});
+        }
       } catch {}
     };
     fetchOrders();
@@ -260,6 +266,8 @@ export default function BaristaHubPage() {
   const logBatch = async (syrupId: string) => {
     const madeOn = localToday();
     setBatches((prev) => ({ ...prev, [syrupId]: madeOn }));
+    // A fresh batch puts the syrup back on the menu
+    setOutOfStock((prev) => ({ ...prev, syrups: prev.syrups.filter((x) => x !== syrupId) }));
     await fetch('/api/syrups', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -453,7 +461,7 @@ function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
       key={label}
       onClick={onClick}
       style={{
-        flex: 1, padding: '8px 0',
+        flex: 1, padding: '8px 0', minHeight: '44px',
         border: `0.5px solid ${active ? palette.bg : `${palette.bg}22`}`,
         borderRadius: '8px',
         background: active ? palette.bg : 'transparent',
@@ -479,7 +487,7 @@ function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
           <p style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', margin: 0, color: palette.bg, fontWeight: 300 }}>{selected.display}</p>
           <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', color: palette.brass, margin: '2px 0 0', letterSpacing: '0.08em' }}>{selected.note}</p>
         </div>
-        <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', color: `${palette.bg}44`, fontSize: '18px', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+        <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', color: `${palette.bg}44`, fontSize: '20px', cursor: 'pointer', padding: 0, lineHeight: 1, width: '44px', height: '44px', marginTop: '-10px', marginRight: '-10px' }}>×</button>
       </div>
 
       {/* ingredients — cocktails only */}
@@ -506,7 +514,7 @@ function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
           <p style={labelStyle}>spirit</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {HIGHBALL_SPIRITS.map((s) => (
-              <button key={s.id} onClick={() => setSpirit(s.id)} style={{ padding: '7px 12px', border: `0.5px solid ${spirit === s.id ? palette.bg : `${palette.bg}22`}`, borderRadius: '8px', background: spirit === s.id ? palette.bg : 'transparent', color: spirit === s.id ? palette.cream : palette.bg, fontFamily: "'Manrope', sans-serif", fontSize: '12px', cursor: 'pointer', transition: 'all 150ms ease' }}>
+              <button key={s.id} onClick={() => setSpirit(s.id)} style={{ padding: '7px 16px', minHeight: '44px', border: `0.5px solid ${spirit === s.id ? palette.bg : `${palette.bg}22`}`, borderRadius: '8px', background: spirit === s.id ? palette.bg : 'transparent', color: spirit === s.id ? palette.cream : palette.bg, fontFamily: "'Manrope', sans-serif", fontSize: '12px', cursor: 'pointer', transition: 'all 150ms ease' }}>
                 {s.label}
               </button>
             ))}
@@ -538,9 +546,9 @@ function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
       <div style={{ marginBottom: '14px' }}>
         <p style={labelStyle}>quantity</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button onClick={() => setQty(Math.max(1, qty - 1))} disabled={qty <= 1} style={{ width: 32, height: 32, border: `0.5px solid ${palette.bg}22`, borderRadius: '8px', background: 'none', fontSize: '17px', cursor: qty <= 1 ? 'default' : 'pointer', color: palette.bg, opacity: qty <= 1 ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>−</button>
+          <button onClick={() => setQty(Math.max(1, qty - 1))} disabled={qty <= 1} style={{ width: 44, height: 44, border: `0.5px solid ${palette.bg}22`, borderRadius: '8px', background: 'none', fontSize: '17px', cursor: qty <= 1 ? 'default' : 'pointer', color: palette.bg, opacity: qty <= 1 ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>−</button>
           <span style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', minWidth: '22px', textAlign: 'center', color: palette.bg, fontWeight: 300 }}>{qty}</span>
-          <button onClick={() => setQty(Math.min(4, qty + 1))} disabled={qty >= 4} style={{ width: 32, height: 32, border: `0.5px solid ${palette.bg}22`, borderRadius: '8px', background: 'none', fontSize: '17px', cursor: qty >= 4 ? 'default' : 'pointer', color: palette.bg, opacity: qty >= 4 ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>+</button>
+          <button onClick={() => setQty(Math.min(4, qty + 1))} disabled={qty >= 4} style={{ width: 44, height: 44, border: `0.5px solid ${palette.bg}22`, borderRadius: '8px', background: 'none', fontSize: '17px', cursor: qty >= 4 ? 'default' : 'pointer', color: palette.bg, opacity: qty >= 4 ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>+</button>
           {qty > 1 && <span style={{ fontSize: '12px', color: `${palette.bg}55`, fontStyle: 'italic' }}>{qty} drinks</span>}
         </div>
       </div>
@@ -548,10 +556,10 @@ function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
       {/* name */}
       <div style={{ marginBottom: '12px' }}>
         <p style={labelStyle}>name</p>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="guest name" style={{ width: '100%', boxSizing: 'border-box', border: `0.5px solid ${palette.bg}22`, borderRadius: '8px', padding: '9px 10px', fontSize: '13px', background: '#fff', color: palette.bg, outline: 'none', fontFamily: "'Manrope', sans-serif" }} />
+        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="guest name" style={{ width: '100%', boxSizing: 'border-box', border: `0.5px solid ${palette.bg}22`, borderRadius: '8px', padding: '12px 10px', fontSize: '16px', background: '#fff', color: palette.bg, outline: 'none', fontFamily: "'Manrope', sans-serif" }} />
       </div>
 
-      <button onClick={handleSubmit} disabled={submitting} style={{ width: '100%', padding: '13px', background: palette.bg, color: palette.cream, border: 'none', borderRadius: '10px', fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.22em', textTransform: 'uppercase', cursor: submitting ? 'wait' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
+      <button onClick={handleSubmit} disabled={submitting} style={{ width: '100%', padding: '13px', minHeight: '52px', background: palette.bg, color: palette.cream, border: 'none', borderRadius: '10px', fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.22em', textTransform: 'uppercase', cursor: submitting ? 'wait' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
         {submitting ? 'sending…' : 'send to queue →'}
       </button>
     </div>
@@ -629,7 +637,7 @@ function QueueBody({ active, palette, onPick, onReady, onDelete, onClearAll }: {
     <div style={{ padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
         <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.2em', color: palette.surface, opacity: 0.6, textTransform: 'uppercase', margin: 0 }}>swipe → ready · ← delete</p>
-        <button onClick={onClearAll} style={{ background: 'transparent', border: `1px solid ${palette.accent}66`, color: palette.accent, fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.15em', padding: '5px 10px', borderRadius: '2px', textTransform: 'uppercase', cursor: 'pointer' }}>clear all</button>
+        <button onClick={onClearAll} style={{ background: 'transparent', border: `1px solid ${palette.accent}66`, color: palette.accent, fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.15em', padding: '5px 12px', minHeight: '40px', borderRadius: '2px', textTransform: 'uppercase', cursor: 'pointer' }}>clear all</button>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {active.map((order) => (

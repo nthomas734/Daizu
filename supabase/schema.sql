@@ -1,3 +1,5 @@
+-- OUT OF DATE: SCHEMA-SYNC.sql at the repo root is the true schema (daizu_-prefixed
+-- table names, every column the app uses). Use that file, not this one.
 -- ─────────────────────────────────────────────────────────────────────────────
 -- daizu — database schema
 --

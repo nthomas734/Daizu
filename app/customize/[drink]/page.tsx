@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { currentEndpoint } from '@/lib/push';
 import {
@@ -44,6 +44,8 @@ export default function CustomizePage({
 
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [name, setName] = useState('');
+  // The name last ordered under on this phone: usuals are shown only for it
+  const [phoneName, setPhoneName] = useState('');
   // 86'd in the bartender's settings: drawn struck through, not tappable
   const [off, setOff] = useState<{ milks: string[]; syrups: string[] }>({ milks: [], syrups: [] });
 
@@ -51,7 +53,7 @@ export default function CustomizePage({
   useEffect(() => {
     try {
       const saved = localStorage.getItem(NAME_KEY);
-      if (saved) setName(saved);
+      if (saved) { setName(saved); setPhoneName(saved); }
     } catch {}
   }, []);
 
@@ -101,7 +103,16 @@ export default function CustomizePage({
       .catch(() => {});
   }, []);
 
-  const matchingFavorites = favorites.filter((f) => f.drink === drinkName);
+  // Only this phone's usuals: a party guest's favorite never comes back as
+  // "the usual?" for someone else
+  const matchingFavorites = favorites.filter(
+    (f) => f.drink === drinkName && !!phoneName && f.customer?.trim().toLowerCase() === phoneName.trim().toLowerCase()
+  );
+
+  const removeFavorite = async (fav: Favorite) => {
+    setFavorites((prev) => prev.filter((f) => f.id !== fav.id));
+    await fetch(`/api/favorites?id=${fav.id}`, { method: 'DELETE' }).catch(() => {});
+  };
 
   const applyFavorite = (fav: Favorite) => {
     if (fav.category === 'bar') {
@@ -228,46 +239,14 @@ export default function CustomizePage({
       {matchingFavorites.length > 0 && (
         <div style={{ marginBottom: '24px' }}>
           {matchingFavorites.map((fav) => (
-            <button
+            <UsualButton
               key={fav.id}
-              onClick={() => applyFavorite(fav)}
-              style={{
-                width: '100%',
-                padding: '12px 14px',
-                background: 'transparent',
-                border: `1px dashed ${palette.brass}66`,
-                borderRadius: '14px',
-                color: palette.cream,
-                fontFamily: "'Manrope', sans-serif",
-                fontSize: '13px',
-                cursor: 'pointer',
-                textAlign: 'left',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '6px',
-              }}
-            >
-              <span>
-                <span style={{ color: palette.brass, fontStyle: 'italic' }}>the usual?</span>
-                <span style={{ marginLeft: '8px', opacity: 0.7, fontSize: '12px' }}>
-                  {fav.temp}
-                  {fav.milk ? ` · ${fav.milk}` : ''}
-                  {fav.syrups?.length ? ` · ${fav.syrups.join(', ')}` : ''}
-                </span>
-              </span>
-              <span
-                style={{
-                  fontFamily: "'Geist Mono', monospace",
-                  fontSize: '10px',
-                  letterSpacing: '0.15em',
-                  color: palette.brass,
-                  textTransform: 'uppercase',
-                }}
-              >
-                tap →
-              </span>
-            </button>
+              fav={fav}
+              whose={matchingFavorites.length > 1}
+              palette={palette}
+              onApply={() => applyFavorite(fav)}
+              onRemove={() => removeFavorite(fav)}
+            />
           ))}
         </div>
       )}
@@ -662,6 +641,84 @@ function Pill({
 }
 
 const NAME_KEY = 'daizu-name';
+
+/**
+ * "the usual?" Tap fills the order. Hold (600ms) asks to remove it; a tap
+ * then removes it, anything else lets it be.
+ */
+function UsualButton({ fav, whose, palette, onApply, onRemove }: {
+  fav: Favorite; whose: boolean; palette: any; onApply: () => void; onRemove: () => void;
+}) {
+  const [armed, setArmed] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const held = useRef(false);
+  const clear = () => { if (timer.current) clearTimeout(timer.current); timer.current = null; };
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(false), 3000);
+    return () => clearTimeout(t);
+  }, [armed]);
+  const detail = fav.category === 'bar'
+    ? [fav.strength, fav.spirit, fav.quantity && fav.quantity > 1 ? `×${fav.quantity}` : null].filter(Boolean).join(' · ')
+    : `${fav.temp}${fav.milk ? ` · ${fav.milk}` : ''}${fav.syrups?.length ? ` · ${fav.syrups.join(', ')}` : ''}`;
+  return (
+    <button
+      onPointerDown={() => {
+        held.current = false;
+        timer.current = setTimeout(() => { held.current = true; setArmed(true); }, 600);
+      }}
+      onPointerUp={clear}
+      onPointerLeave={clear}
+      onPointerCancel={clear}
+      onContextMenu={(e) => e.preventDefault()}
+      onClick={() => {
+        if (held.current) { held.current = false; return; }
+        if (armed) { setArmed(false); onRemove(); return; }
+        onApply();
+      }}
+      style={{
+        width: '100%',
+        minHeight: '44px',
+        padding: '12px 14px',
+        background: armed ? `${palette.accent}22` : 'transparent',
+        border: `1px dashed ${armed ? palette.accent : `${palette.brass}66`}`,
+        borderRadius: '14px',
+        color: palette.cream,
+        fontFamily: "'Manrope', sans-serif",
+        fontSize: '13px',
+        cursor: 'pointer',
+        textAlign: 'left',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '6px',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none',
+      }}
+    >
+      <span>
+        <span style={{ color: palette.brass, fontStyle: 'italic' }}>
+          {armed ? 'remove this usual?' : whose ? `${fav.customer.toLowerCase()}'s usual?` : 'the usual?'}
+        </span>
+        <span style={{ marginLeft: '8px', opacity: 0.7, fontSize: '12px' }}>{detail}</span>
+      </span>
+      <span
+        style={{
+          fontFamily: "'Geist Mono', monospace",
+          fontSize: '10px',
+          letterSpacing: '0.15em',
+          color: armed ? palette.cream : palette.brass,
+          textTransform: 'uppercase',
+          flexShrink: 0,
+          marginLeft: '8px',
+        }}
+      >
+        {armed ? 'tap to remove' : 'tap →'}
+      </span>
+    </button>
+  );
+}
 
 const miniLabel = (palette: any) => ({
   fontFamily: "'Geist Mono', monospace",

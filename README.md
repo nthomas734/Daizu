@@ -168,7 +168,7 @@ Add each of these one at a time. Click "Add" after each. Names must match exactl
 3. You should see the daizu menu, with the split-flap board flipping into Japanese, then English
 4. Tap a drink → customize it → tap "send order"
 5. **Your phone should buzz** with a Pushover notification — "New order from Dez: latte..."
-6. Triple-tap the tiny brass dot in the bottom-right of the menu screen
+6. Press and hold the tiny brass dot in the bottom-right of the menu screen
 7. You're now in the barista hub. See your order in the queue.
 8. Tap it → tap "start brewing" → tap "ready for pickup"
 9. **Her phone should buzz** with a Japanese phrase notification
@@ -197,7 +197,7 @@ This makes it feel like a native app.
 2. Add to Home Screen, name it `daizu barista`
 3. Now you have two icons — one for ordering, one for receiving
 
-Or, just save the menu URL and triple-tap the brass dot when you need to switch to barista mode. Either works.
+Or, just save the menu URL and press and hold the brass dot when you need to switch to barista mode. Either works.
 
 ---
 

@@ -22,6 +22,8 @@ export interface PushPayload {
   tag?: string;
   /** alert again even though it replaces a notification with the same tag */
   renotify?: boolean;
+  /** number on the app icon (bartender: open orders); 0 clears it */
+  badge?: number;
 }
 
 interface SubRow {
@@ -82,6 +84,11 @@ export async function sendToRole(
   try {
     const { data } = await supabaseAdmin().from('daizu_push').select('*').eq('role', role);
     const subs = ((data ?? []) as SubRow[]).filter((s) => s.endpoint !== exceptEndpoint);
+    if (subs.length === 0) return 0;
+    // Every bartender push carries the open-order count for the icon badge
+    if (role === 'barista' && payload.badge === undefined) {
+      payload = { ...payload, badge: await openOrderCount() };
+    }
     return await sendTo(subs, payload);
   } catch (err) {
     console.error('sendToRole failed:', err);
@@ -97,4 +104,15 @@ export async function sendToEndpoint(endpoint: string, payload: PushPayload): Pr
     console.error('sendToEndpoint failed:', err);
     return 0;
   }
+}
+
+/** Orders still to make: the same last-24h window the queue shows. */
+export async function openOrderCount(): Promise<number | undefined> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count, error } = await supabaseAdmin()
+    .from('daizu_orders')
+    .select('id', { count: 'exact', head: true })
+    .in('status', ['received', 'brewing'])
+    .gte('created_at', since);
+  return error ? undefined : count ?? 0;
 }
