@@ -30,26 +30,21 @@ type PosItem = {
   cat: 'bar' | 'cafe';
 };
 
-const BAR_ITEMS: PosItem[] = [
-  { name: 'OLD FASHIONED', display: 'old fashioned', note: 'bourbon · bitters · sugar', cat: 'bar' },
-  { name: 'GIN & TONIC',   display: 'gin & tonic',   note: 'gin · tonic · lime',        cat: 'bar' },
-  { name: 'DAIQUIRI',      display: 'daiquiri',      note: 'rum · lime · demerara',     cat: 'bar' },
-  { name: 'ESPRESSO TINI', display: 'espresso tini', note: 'vodka · espresso · mr black', cat: 'bar' },
-  { name: 'GOLD COAST',    display: 'gold coast',    note: 'rye · honey · IPA float',   cat: 'bar' },
-  { name: 'GARDEN MULE',   display: 'garden mule',   note: 'gin · hibiscus · ginger',   cat: 'bar' },
-  { name: 'NEGRONI',       display: 'negroni',       note: 'gin · campari · vermouth',  cat: 'bar' },
-  { name: 'HOUSE HIGHBALL',display: 'highball',      note: 'spirit · soda · citrus',    cat: 'bar' },
-];
+// One list: the POS reads the same COCKTAILS and DRINKS as the customer menu,
+// so a note or spirit can't drift between the two.
+const BAR_ITEMS: PosItem[] = COCKTAILS.map((c) => ({
+  name: c.name,
+  display: c.name.toLowerCase().replace(/^house /, ''),
+  note: c.note,
+  cat: 'bar' as const,
+}));
 
-const CAFE_ITEMS: PosItem[] = [
-  { name: 'ESPRESSO',   display: 'espresso',   note: 'double shot',          cat: 'cafe' },
-  { name: 'LONG BLACK', display: 'long black', note: 'espresso · hot water', cat: 'cafe' },
-  { name: 'AMERICANO',  display: 'americano',  note: 'espresso · water',     cat: 'cafe' },
-  { name: 'CORTADO',    display: 'cortado',    note: 'espresso · milk 1:1',  cat: 'cafe' },
-  { name: 'FLAT WHITE', display: 'flat white', note: 'espresso · microfoam', cat: 'cafe' },
-  { name: 'CAPPUCCINO', display: 'cappuccino', note: 'espresso · foam',      cat: 'cafe' },
-  { name: 'LATTE',      display: 'latte',      note: 'espresso · milk',      cat: 'cafe' },
-];
+const CAFE_ITEMS: PosItem[] = DRINKS.map((d) => ({
+  name: d.name,
+  display: d.name.toLowerCase(),
+  note: d.note,
+  cat: 'cafe' as const,
+}));
 
 // Per-drink accent colors — kura category palette
 const DRINK_COLORS: Record<string, string> = {
@@ -267,6 +262,18 @@ export default function BaristaHubPage() {
     setOrders((prev) => prev.filter((o) => o.id !== id));
   };
 
+  // One tap from the queue: same route as the order page's ready bar, so
+  // the customer still gets the phrase.
+  const readyOrder = async (id: number) => {
+    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: 'ready' } : o)));
+    try {
+      const res = await fetch(`/api/orders/${id}/ready`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 404) setOrders((prev) => prev.filter((o) => o.id !== id));
+      else if (data.order) setOrders((prev) => prev.map((o) => (o.id === id ? data.order : o)));
+    } catch {}
+  };
+
   const clearAll = async () => {
     if (!confirm('Clear all active orders?')) return;
     await fetch('/api/orders', { method: 'DELETE' });
@@ -344,7 +351,7 @@ export default function BaristaHubPage() {
         </div>
 
         {tab === 'queue' && (
-          <QueueBody active={active} palette={palette} onPick={(id) => router.push(`/barista/order/${id}`)} onDelete={deleteOrder} onClearAll={clearAll} />
+          <QueueBody active={active} palette={palette} onPick={(id) => router.push(`/barista/order/${id}`)} onReady={readyOrder} onDelete={deleteOrder} onClearAll={clearAll} />
         )}
         {tab === 'order' && <OrderBody palette={palette} isTablet={isTablet} />}
         {tab === 'stats' && <StatsBody orders={orders} palette={palette} />}
@@ -363,7 +370,7 @@ function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
   const [menuMode, setMenuMode] = useState<'bar' | 'cafe'>('bar');
   const [selected, setSelected]   = useState<PosItem | null>(null);
   const [strength, setStrength]   = useState<'light' | 'standard' | 'strong'>('standard');
-  const [spirit, setSpirit]       = useState('bourbon');
+  const [spirit, setSpirit]       = useState<string>(HIGHBALL_SPIRITS[0].id);
   const [temp, setTemp]           = useState<'hot' | 'iced'>('hot');
   const [qty, setQty]             = useState(1);
   const [name, setName]           = useState('');
@@ -380,7 +387,7 @@ function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
     setStrength('standard');
     setTemp('hot');
     setQty(1);
-    setSpirit('bourbon');
+    setSpirit(HIGHBALL_SPIRITS[0].id);
     setSent(false);
   };
 
@@ -575,8 +582,8 @@ function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // QueueBody (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
-function QueueBody({ active, palette, onPick, onDelete, onClearAll }: {
-  active: Order[]; palette: any; onPick: (id: number) => void; onDelete: (id: number) => void; onClearAll: () => void;
+function QueueBody({ active, palette, onPick, onReady, onDelete, onClearAll }: {
+  active: Order[]; palette: any; onPick: (id: number) => void; onReady: (id: number) => void; onDelete: (id: number) => void; onClearAll: () => void;
 }) {
   if (active.length === 0) {
     return (
@@ -592,27 +599,28 @@ function QueueBody({ active, palette, onPick, onDelete, onClearAll }: {
   return (
     <div style={{ padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.2em', color: palette.surface, opacity: 0.6, textTransform: 'uppercase', margin: 0 }}>swipe ← to delete</p>
+        <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.2em', color: palette.surface, opacity: 0.6, textTransform: 'uppercase', margin: 0 }}>swipe → ready · ← delete</p>
         <button onClick={onClearAll} style={{ background: 'transparent', border: `1px solid ${palette.accent}66`, color: palette.accent, fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.15em', padding: '5px 10px', borderRadius: '2px', textTransform: 'uppercase', cursor: 'pointer' }}>clear all</button>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {active.map((order) => (
-          <SwipeRow key={order.id} onDelete={() => onDelete(order.id)} palette={palette}>
-            <button
-              onClick={() => onPick(order.id)}
+          <SwipeRow key={order.id} onDelete={() => onDelete(order.id)} onReady={() => onReady(order.id)} palette={palette}>
+            <div
               style={{
                 width: '100%', background: '#fff',
                 border: `0.5px solid ${palette.bg}11`,
-                borderRadius: '16px', padding: 0,
-                cursor: 'pointer', textAlign: 'left',
+                borderRadius: '16px',
                 display: 'flex', overflow: 'hidden',
               }}
             >
               {/* drink-color accent bar */}
               <div style={{ width: '6px', flexShrink: 0, background: getDrinkColor(order.drink) }} />
-              {/* card content */}
-              <div style={{ flex: 1, padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
+              {/* card content — tap opens the recipe */}
+              <button
+                onClick={() => onPick(order.id)}
+                style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', padding: '18px 8px 18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: palette.bg, fontFamily: "'Manrope', sans-serif" }}
+              >
+                <div style={{ minWidth: 0 }}>
                   <p style={{ margin: 0, fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 300, color: palette.bg, lineHeight: 1.1 }}>
                     {order.drink.toLowerCase()}
                     {order.category === 'bar' && order.quantity && order.quantity > 1 && (
@@ -645,8 +653,16 @@ function QueueBody({ active, palette, onPick, onDelete, onClearAll }: {
                     {timeAgo(order.created_at)}
                   </p>
                 </div>
-              </div>
-            </button>
+              </button>
+              {/* one tap to ready, for when swiping is awkward */}
+              <button
+                onClick={() => onReady(order.id)}
+                aria-label={`mark ${order.drink.toLowerCase()} ready`}
+                style={{ flexShrink: 0, alignSelf: 'center', width: '48px', height: '48px', margin: '0 12px 0 4px', borderRadius: '50%', border: `1px solid ${palette.bg}33`, background: 'transparent', color: palette.bg, fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                ✓
+              </button>
+            </div>
           </SwipeRow>
         ))}
       </div>

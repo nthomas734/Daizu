@@ -362,7 +362,7 @@ export const COCKTAIL_RECIPES: Record<string, CocktailRecipe> = {
   'HOUSE HIGHBALL': {
     glass: 'highball',
     glassLabel: 'highball, lots of ice',
-    garnish: 'citrus to match (lemon for rye/gin, lime for vodka/rum)',
+    garnish: 'citrus to match (lemon for rye; lime for gin, vodka, rum)',
     ingredients: [
       '2 oz spirit (your choice)',
       '4 oz soda water (or topo chico)',

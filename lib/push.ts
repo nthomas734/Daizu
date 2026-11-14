@@ -49,13 +49,13 @@ async function getSub(): Promise<PushSubscription | null> {
   return (await reg?.pushManager.getSubscription()) ?? null;
 }
 
-async function saveSub(sub: PushSubscription, role: PushRole, orderId?: number): Promise<void> {
+async function saveSub(sub: PushSubscription, role: PushRole, orderId?: number, testPing?: boolean): Promise<void> {
   const json = sub.toJSON();
   if (!json.keys?.p256dh || !json.keys?.auth) throw new Error('Subscription missing keys');
   const res = await fetch('/api/push', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ endpoint: sub.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth, role, orderId }),
+    body: JSON.stringify({ endpoint: sub.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth, role, orderId, testPing }),
   });
   if (!res.ok) throw new Error('Could not save subscription');
 }
@@ -67,8 +67,9 @@ export async function getPushStatus(): Promise<PushStatus> {
   return sub ? storedRole() ?? 'customer' : 'off';
 }
 
-// orderId: also attach this device to an order placed before opting in
-export async function enablePush(role: PushRole, orderId?: number): Promise<void> {
+// orderId: also attach this device to an order placed before opting in.
+// testPing: send one notification straight back so the opt-in is visible.
+export async function enablePush(role: PushRole, orderId?: number, testPing?: boolean): Promise<void> {
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') throw new Error('Permission not granted');
   const reg = await navigator.serviceWorker.getRegistration();
@@ -79,7 +80,7 @@ export async function enablePush(role: PushRole, orderId?: number): Promise<void
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
     }));
-  await saveSub(sub, role, orderId);
+  await saveSub(sub, role, orderId, testPing);
   try { localStorage.setItem(ROLE_KEY, role); } catch {}
 }
 

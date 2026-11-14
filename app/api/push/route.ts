@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { sendToEndpoint } from '@/lib/push-server';
+
+export const runtime = 'nodejs';
 
 // POST — save (or re-save) this device's push subscription.
 // body: { endpoint, p256dh, auth, role: 'barista'|'customer', orderId? }
 // orderId attaches the device to an order placed before it opted in, so
-// that order's "ready" ping still finds it.
+// that order's "ready" ping still finds it. testPing sends one notification
+// straight back to this device, so the person opting in sees it work.
 export async function POST(req: NextRequest) {
-  const { endpoint, p256dh, auth, role, orderId } = await req.json();
+  const { endpoint, p256dh, auth, role, orderId, testPing } = await req.json();
   if (!endpoint || !p256dh || !auth || !['barista', 'customer'].includes(role)) {
     return NextResponse.json({ error: 'invalid_subscription' }, { status: 400 });
   }
@@ -20,6 +24,14 @@ export async function POST(req: NextRequest) {
   }
   if (orderId) {
     await sb.from('daizu_orders').update({ push_endpoint: endpoint }).eq('id', orderId);
+  }
+  if (testPing) {
+    await sendToEndpoint(endpoint, {
+      title: '☕ daizu',
+      body: "pings are on. you'll hear from the bar when it's ready.",
+      url: orderId ? `/confirm/${orderId}` : '/',
+      tag: 'daizu-test',
+    });
   }
   return NextResponse.json({ ok: true });
 }

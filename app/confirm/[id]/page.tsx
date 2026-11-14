@@ -23,6 +23,7 @@ export default function ConfirmPage({
   const [showReturn, setShowReturn] = useState(false);
   const [pushStatus, setPushStatus] = useState<PushStatus | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
+  const [gone, setGone] = useState(false);
 
   useEffect(() => { getPushStatus().then(setPushStatus); }, []);
 
@@ -30,7 +31,8 @@ export default function ConfirmPage({
   const turnOnReadyPings = async () => {
     setPushBusy(true);
     try {
-      await enablePush('customer', Number(id));
+      // Attaches this order too, and sends one test ping so she sees it work
+      await enablePush('customer', Number(id), true);
     } catch {}
     setPushStatus(await getPushStatus());
     setPushBusy(false);
@@ -52,6 +54,7 @@ export default function ConfirmPage({
     const fetchOrder = async () => {
       try {
         const res = await fetch(`/api/orders/${id}`, { cache: 'no-store' });
+        if (res.status === 404) { if (!stop) setGone(true); return; }
         if (!res.ok) return;
         const data = await res.json();
         if (!stop && data.order) setOrder(data.order);
@@ -98,6 +101,25 @@ export default function ConfirmPage({
     boardTimer.current = null;
     setBoardPressing(false);
   };
+
+  if (gone) {
+    return (
+      <div style={{ ...wrap, flexDirection: 'column', gap: '28px', textAlign: 'center', background: palette.bg, color: palette.cream }}>
+        <p style={{ margin: 0, fontFamily: "'Manrope', sans-serif", fontSize: '15px', opacity: 0.85 }}>
+          the bartender closed this one.
+        </p>
+        <button
+          onClick={() => router.push(backUrl)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          aria-label="back to menu"
+        >
+          <div style={{ background: palette.board, padding: '16px 14px', borderRadius: '6px', border: `1px solid ${palette.brass}33`, boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)' }}>
+            <FlapRow text="BACK TO MENU" width={12} startDelay={0} palette={palette} jp={false} refreshKey={1} />
+          </div>
+        </button>
+      </div>
+    );
+  }
 
   if (!order) {
     return (
@@ -308,6 +330,45 @@ export default function ConfirmPage({
         )}
       </div>
 
+      {/* Ready ping — offer once per phone; afterwards every order pings */}
+      {!isReady && pushStatus === 'off' && (
+        <button
+          onClick={turnOnReadyPings}
+          disabled={pushBusy}
+          style={{
+            background: 'transparent',
+            border: `1px solid ${palette.brass}66`,
+            color: palette.brass,
+            padding: '12px 18px',
+            minHeight: '44px',
+            borderRadius: '2px',
+            fontFamily: "'Geist Mono', monospace",
+            fontSize: '10px',
+            letterSpacing: '0.2em',
+            textTransform: 'uppercase',
+            cursor: 'pointer',
+            opacity: pushBusy ? 0.6 : 1,
+          }}
+        >
+          ping me when it&apos;s ready
+        </button>
+      )}
+      {!isReady && pushStatus === 'unsupported' && (
+        <p style={{ margin: 0, fontFamily: "'Manrope', sans-serif", fontSize: '12px', color: palette.cream, opacity: 0.6, maxWidth: '280px', lineHeight: 1.5 }}>
+          add daizu to your home screen to get a ping when it&apos;s ready
+        </p>
+      )}
+      {!isReady && pushStatus === 'denied' && (
+        <p style={{ margin: 0, fontFamily: "'Manrope', sans-serif", fontSize: '12px', color: palette.cream, opacity: 0.6, maxWidth: '280px', lineHeight: 1.5 }}>
+          notifications are off for daizu in your phone&apos;s settings
+        </p>
+      )}
+      {!isReady && (pushStatus === 'customer' || pushStatus === 'barista') && (
+        <p style={{ margin: 0, fontFamily: "'Geist Mono', monospace", fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', color: palette.brass, opacity: 0.6 }}>
+          — we&apos;ll ping you when it&apos;s ready —
+        </p>
+      )}
+
       {canCancel && (
         <button
           onClick={cancel}
@@ -326,34 +387,6 @@ export default function ConfirmPage({
         >
           cancel · {secondsLeft}s
         </button>
-      )}
-
-      {/* Ready ping — offer once per phone; afterwards every order pings */}
-      {!isReady && pushStatus === 'off' && (
-        <button
-          onClick={turnOnReadyPings}
-          disabled={pushBusy}
-          style={{
-            background: 'transparent',
-            border: `1px solid ${palette.brass}66`,
-            color: palette.brass,
-            padding: '10px 18px',
-            borderRadius: '2px',
-            fontFamily: "'Geist Mono', monospace",
-            fontSize: '10px',
-            letterSpacing: '0.2em',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-            opacity: pushBusy ? 0.6 : 1,
-          }}
-        >
-          ping me when it&apos;s ready
-        </button>
-      )}
-      {!isReady && (pushStatus === 'customer' || pushStatus === 'barista') && (
-        <p style={{ margin: 0, fontFamily: "'Geist Mono', monospace", fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', color: palette.brass, opacity: 0.6 }}>
-          — we&apos;ll ping you when it&apos;s ready —
-        </p>
       )}
 
       {/* Flapboard return button — appears after cancel window closes */}

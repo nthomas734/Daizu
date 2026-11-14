@@ -44,6 +44,16 @@ export default function CustomizePage({
 
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [name, setName] = useState('');
+  // 86'd in the bartender's settings: drawn struck through, not tappable
+  const [off, setOff] = useState<{ milks: string[]; syrups: string[] }>({ milks: [], syrups: [] });
+
+  // The last name used on this phone, so it isn't typed fresh every order
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(NAME_KEY);
+      if (saved) setName(saved);
+    } catch {}
+  }, []);
 
   // Coffee-only state
   const [temp, setTemp] = useState<'hot' | 'iced'>('hot');
@@ -78,6 +88,19 @@ export default function CustomizePage({
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    fetch('/api/out-of-stock', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.outOfStock) return;
+        const o = { milks: d.outOfStock.milks || [], syrups: d.outOfStock.syrups || [] };
+        setOff(o);
+        setSyrups((prev) => prev.filter((x) => !o.syrups.includes(x)));
+        setMilk((prev) => (prev && o.milks.includes(prev) ? MILKS.find((m) => !o.milks.includes(m.id))?.id ?? prev : prev));
+      })
+      .catch(() => {});
+  }, []);
+
   const matchingFavorites = favorites.filter((f) => f.drink === drinkName);
 
   const applyFavorite = (fav: Favorite) => {
@@ -87,8 +110,9 @@ export default function CustomizePage({
       if (fav.spirit) setSpirit(fav.spirit);
     } else {
       setTemp(fav.temp);
-      setMilk(fav.milk ?? (isMilkDrink ? 'whole' : null));
-      setSyrups(fav.syrups || []);
+      const favMilk = fav.milk ?? (isMilkDrink ? 'whole' : null);
+      setMilk(favMilk && off.milks.includes(favMilk) ? MILKS.find((m) => !off.milks.includes(m.id))?.id ?? favMilk : favMilk);
+      setSyrups((fav.syrups || []).filter((x) => !off.syrups.includes(x)));
       setSweetness(fav.sweetness || 'normal');
       setExtras(fav.extras || []);
     }
@@ -126,6 +150,9 @@ export default function CustomizePage({
           customer: name.trim() || 'Dez',
           saveAsFav,
         };
+    try {
+      if (name.trim()) localStorage.setItem(NAME_KEY, name.trim());
+    } catch {}
     const pushEndpoint = await currentEndpoint();
     const res = await fetch('/api/orders', {
       method: 'POST',
@@ -253,6 +280,10 @@ export default function CustomizePage({
           placeholder="Dez"
           style={{
             width: '100%',
+            boxSizing: 'border-box',
+            color: palette.cream,
+            fontFamily: "'Manrope', sans-serif",
+            fontSize: '14px',
             background: 'transparent',
             border: `1px solid ${palette.brass}55`,
             borderRadius: '10px',
@@ -282,6 +313,7 @@ export default function CustomizePage({
                     active={milk === m.id}
                     onClick={() => setMilk(m.id)}
                     palette={palette}
+                    off={off.milks.includes(m.id)}
                   >
                     {m.label}
                   </Pill>
@@ -298,9 +330,10 @@ export default function CustomizePage({
                   active={syrups.includes(s.id)}
                   onClick={() => toggleArr(syrups, setSyrups, s.id)}
                   palette={palette}
+                  off={off.syrups.includes(s.id)}
                 >
                   {s.label}
-                  {'seasonal' in s && s.seasonal && (
+                  {!off.syrups.includes(s.id) && 'seasonal' in s && s.seasonal && (
                     <span
                       style={{
                         fontSize: '9px',
@@ -572,13 +605,39 @@ function Pill({
   active,
   onClick,
   palette,
+  off,
   children,
 }: {
   active: boolean;
   onClick: () => void;
   palette: any;
+  off?: boolean;
   children: React.ReactNode;
 }) {
+  if (off) {
+    return (
+      <span
+        aria-disabled="true"
+        style={{
+          border: `1px solid ${palette.brass}26`,
+          color: palette.cream,
+          padding: '8px 14px',
+          fontFamily: "'Manrope', sans-serif",
+          fontSize: '13px',
+          borderRadius: '20px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          opacity: 0.45,
+          cursor: 'default',
+        }}
+      >
+        <span style={{ textDecoration: 'line-through' }}>{children}</span>
+        <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: '9px', letterSpacing: '0.1em', marginLeft: '6px' }}>
+          back soon
+        </span>
+      </span>
+    );
+  }
   return (
     <button
       onClick={onClick}
@@ -601,6 +660,8 @@ function Pill({
     </button>
   );
 }
+
+const NAME_KEY = 'daizu-name';
 
 const miniLabel = (palette: any) => ({
   fontFamily: "'Geist Mono', monospace",

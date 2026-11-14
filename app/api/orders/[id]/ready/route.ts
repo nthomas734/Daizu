@@ -15,9 +15,16 @@ export async function POST(
   // Fetch category first so the ready phrase is appropriate for café vs bar
   const { data: existing } = await sb
     .from('daizu_orders')
-    .select('category')
+    .select('*')
     .eq('id', id)
     .single();
+  if (!existing) {
+    return NextResponse.json({ error: 'not_found' }, { status: 404 });
+  }
+  // A second tap (queue button + order page, two phones) must not ping twice
+  if (existing.status === 'ready') {
+    return NextResponse.json({ order: existing });
+  }
   const category = (existing?.category === 'bar' ? 'bar' : 'cafe') as 'cafe' | 'bar';
   const phrase = pickReadyPhrase(category);
 

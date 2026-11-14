@@ -36,11 +36,33 @@ export default function BaristaOrderPage({
   const [order, setOrder] = useState<Order | null>(null);
   const [readyPhrase, setReadyPhrase] = useState<{ jp: string; en: string } | null>(null);
 
+  const [gone, setGone] = useState(false);
+  const [marking, setMarking] = useState(false);
+
+  // Opening the order is "I've seen it": a new order moves to brewing by
+  // itself, so the customer's second dot lights up and there's no start
+  // button to tap. A 404 means the customer cancelled (or it was cleared).
   useEffect(() => {
-    fetch(`/api/orders/${id}`)
-      .then((r) => r.json())
-      .then((d) => d.order && setOrder(d.order))
-      .catch(() => {});
+    let live = true;
+    (async () => {
+      try {
+        const r = await fetch(`/api/orders/${id}`, { cache: 'no-store' });
+        if (r.status === 404) { if (live) setGone(true); return; }
+        const d = await r.json();
+        if (!live || !d.order) return;
+        setOrder(d.order);
+        if (d.order.status === 'received') {
+          const res = await fetch(`/api/orders/${id}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'brewing' }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (live && data.order) setOrder(data.order);
+        }
+      } catch {}
+    })();
+    return () => { live = false; };
   }, [id]);
 
   // Determine category based on order data; default cafe palette while loading
@@ -48,6 +70,21 @@ export default function BaristaOrderPage({
     order?.category === 'bar' ||
     (!!order && COCKTAILS.some((c) => c.name === order.drink));
   const palette = isCocktail ? COLORS.bar : COLORS.cafe;
+
+  if (gone) {
+    return (
+      <div style={{ minHeight: '100vh', background: palette.cream, color: palette.bg, padding: '60px 24px', fontFamily: "'Manrope', sans-serif", textAlign: 'center' }}>
+        <p style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 300, margin: 0 }}>this order was cancelled.</p>
+        <p style={{ fontSize: '13px', opacity: 0.6, margin: '8px 0 28px', fontStyle: 'italic' }}>nothing to make</p>
+        <button
+          onClick={() => router.push('/barista')}
+          style={{ background: palette.bg, color: palette.cream, border: 'none', padding: '14px 28px', minHeight: '48px', fontFamily: "'Geist Mono', monospace", fontSize: '12px', letterSpacing: '0.22em', textTransform: 'uppercase', borderRadius: '12px', cursor: 'pointer' }}
+        >
+          ← back to the queue
+        </button>
+      </div>
+    );
+  }
 
   if (!order) {
     return (
@@ -109,23 +146,20 @@ export default function BaristaOrderPage({
     steps = order.temp === 'iced' ? recipe.iced : recipe.hot;
   }
 
-  const advance = async () => {
-    const res = await fetch(`/api/orders/${id}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'brewing' }),
-    });
-    const data = await res.json();
-    if (data.order) setOrder(data.order);
-  };
-
   const markReady = async () => {
-    const res = await fetch(`/api/orders/${id}/ready`, { method: 'POST' });
-    const data = await res.json();
-    if (data.order) {
-      setOrder(data.order);
-      setReadyPhrase({ jp: data.order.ready_phrase_jp, en: data.order.ready_phrase_en });
-      setTimeout(() => router.push('/barista'), 2400);
+    if (marking) return;
+    setMarking(true);
+    try {
+      const res = await fetch(`/api/orders/${id}/ready`, { method: 'POST' });
+      if (res.status === 404) { setGone(true); return; }
+      const data = await res.json();
+      if (data.order) {
+        setOrder(data.order);
+        setReadyPhrase({ jp: data.order.ready_phrase_jp, en: data.order.ready_phrase_en });
+        setTimeout(() => router.push('/barista'), 2400);
+      }
+    } finally {
+      setMarking(false);
     }
   };
 
@@ -210,19 +244,33 @@ export default function BaristaOrderPage({
     </Section>
   );
 
-  const actionBlock = (
-    <>
-      {order.status === 'received' && (
-        <button onClick={advance} style={{ width: '100%', marginTop: '12px', background: palette.brass, color: palette.bg, border: 'none', padding: '16px', fontFamily: "'Geist Mono', monospace", fontSize: '13px', letterSpacing: '0.25em', fontWeight: 600, textTransform: 'uppercase', borderRadius: '12px', cursor: 'pointer' }}>
-          {isCocktail ? 'start mixing' : 'start brewing'}
-        </button>
-      )}
-      {order.status === 'brewing' && (
-        <button onClick={markReady} style={{ width: '100%', marginTop: '12px', background: palette.bg, color: palette.cream, border: 'none', padding: '16px', fontFamily: "'Geist Mono', monospace", fontSize: '13px', letterSpacing: '0.25em', fontWeight: 600, textTransform: 'uppercase', borderRadius: '12px', cursor: 'pointer' }}>
-          ✓ ready for pickup
-        </button>
-      )}
-    </>
+  // Fixed to the bottom so it's under the thumb the moment the page opens
+  // from a notification — no scrolling past the recipe.
+  const readyBar = order.status !== 'ready' && order.status !== 'cancelled' && (
+    <div
+      style={{
+        position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 50,
+        padding: '12px 16px calc(12px + env(safe-area-inset-bottom))',
+        background: `${palette.cream}F2`,
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        borderTop: `0.5px solid ${palette.bg}1A`,
+      }}
+    >
+      <button
+        onClick={markReady}
+        disabled={marking}
+        style={{
+          display: 'block', width: '100%', maxWidth: isTablet ? '560px' : '448px', margin: '0 auto',
+          minHeight: '56px', background: palette.bg, color: palette.cream, border: 'none',
+          fontFamily: "'Geist Mono', monospace", fontSize: '13px', letterSpacing: '0.22em',
+          fontWeight: 600, textTransform: 'uppercase', borderRadius: '14px',
+          cursor: marking ? 'wait' : 'pointer', opacity: marking ? 0.7 : 1,
+        }}
+      >
+        ✓ ready for {order.customer}
+      </button>
+    </div>
   );
 
   return (
@@ -286,7 +334,7 @@ export default function BaristaOrderPage({
     <div
       style={{
         minHeight: '100vh',
-        paddingBottom: '40px',
+        paddingBottom: '120px',
         fontFamily: "'Manrope', sans-serif",
         maxWidth: isLargeTablet ? '1300px' : isTablet ? '900px' : '480px',
         margin: '0 auto',
@@ -304,7 +352,6 @@ export default function BaristaOrderPage({
           {/* RIGHT: recipe + actions */}
           <div style={{ paddingTop: '8px' }}>
             {recipeBlock}
-            {actionBlock}
           </div>
         </div>
       ) : (
@@ -314,9 +361,10 @@ export default function BaristaOrderPage({
           {scaleBannerBlock}
           {ingredientsBlock}
           {recipeBlock}
-          {actionBlock}
         </div>
       )}
+
+      {readyBar}
 
       {readyPhrase && (
         <div
