@@ -17,7 +17,7 @@ self.addEventListener('activate', (event) => {
 });
 
 // ── Web push: new orders, "ready" pings, syrup reminders ──
-// Payload is JSON: { title, body, url, tag }. iOS requires every push to
+// Payload is JSON: { title, body, url, tag, renotify? }. iOS requires every push to
 // show a notification, so always call showNotification.
 self.addEventListener('push', (event) => {
   let data = {};
@@ -32,6 +32,7 @@ self.addEventListener('push', (event) => {
       icon: '/icon-180.png',
       badge: '/icon-180.png',
       tag: data.tag || 'daizu',
+      renotify: !!data.renotify,
       data: { url: data.url || '/' },
     })
   );

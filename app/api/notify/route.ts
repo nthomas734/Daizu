@@ -7,6 +7,11 @@
 //   or already have. Repeats daily until a new batch is logged or the syrup
 //   is 86'd in settings. Silent when everything's fresh.
 // body { kind: 'test', role } — ping every device with that role.
+// body { kind: 'waiting' } — from pg_cron `daizu-waiting` (every minute, and
+//   only when an order is actually waiting): an order still "received" gets
+//   a second bartender ping at 3 minutes and a third at 8, then nothing.
+//   `nudges` on the order makes each fire once. Same tag as the first push,
+//   so it replaces that notification rather than stacking.
 
 import { createHash } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
@@ -45,6 +50,10 @@ export async function POST(req: NextRequest) {
       tag: 'daizu-test',
     });
     return NextResponse.json({ sent });
+  }
+
+  if (body.kind === 'waiting') {
+    return NextResponse.json(await nudgeWaiting());
   }
 
   if (body.kind !== 'syrups') {
@@ -89,4 +98,47 @@ export async function POST(req: NextRequest) {
     tag: 'daizu-syrups',
   });
   return NextResponse.json({ sent, expired, tomorrow, today });
+}
+
+const NUDGE_AT_MIN = [3, 8];
+
+async function nudgeWaiting() {
+  const sb = supabaseAdmin();
+  const since = new Date(Date.now() - 30 * 60_000).toISOString();
+  const { data: orders } = await sb
+    .from('daizu_orders')
+    .select('id, customer, drink, category, quantity, push_endpoint, created_at, nudges')
+    .eq('status', 'received')
+    .lt('nudges', NUDGE_AT_MIN.length)
+    .gte('created_at', since);
+
+  let sent = 0;
+  for (const o of orders ?? []) {
+    const ageMin = (Date.now() - new Date(o.created_at).getTime()) / 60_000;
+    const due = NUDGE_AT_MIN.filter((m) => ageMin >= m).length;
+    if (due <= o.nudges) continue;
+    // Claim the nudge first; if another run got there, skip
+    const { data: claimed } = await sb
+      .from('daizu_orders')
+      .update({ nudges: due })
+      .eq('id', o.id)
+      .eq('nudges', o.nudges)
+      .eq('status', 'received')
+      .select('id');
+    if (!claimed?.length) continue;
+    const emoji = o.category === 'bar' ? '🍸' : '☕';
+    const qty = o.quantity > 1 ? `${o.quantity} × ` : '';
+    sent += await sendToRole(
+      'barista',
+      {
+        title: `${emoji} still waiting`,
+        body: `${o.customer} is still waiting · ${qty}${o.drink.toLowerCase()}`,
+        url: `/barista/order/${o.id}`,
+        tag: `daizu-order-${o.id}`,
+        renotify: true,
+      },
+      o.push_endpoint
+    );
+  }
+  return { sent, checked: orders?.length ?? 0 };
 }

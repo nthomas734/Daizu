@@ -82,7 +82,7 @@ export default function ConfirmPage({
   }, [secondsLeft, order]);
 
   const cancel = async () => {
-    await fetch(`/api/orders/${id}`, { method: 'DELETE' });
+    await fetch(`/api/orders/${id}?by=customer`, { method: 'DELETE' });
     router.push(backUrl);
   };
 

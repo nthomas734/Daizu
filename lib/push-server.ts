@@ -20,6 +20,8 @@ export interface PushPayload {
   body: string;
   url: string;
   tag?: string;
+  /** alert again even though it replaces a notification with the same tag */
+  renotify?: boolean;
 }
 
 interface SubRow {

@@ -368,4 +368,64 @@ create policy "public_read_out_of_stock"
   to public
   using (true);
 
+-- ---------------------------------------------------------------------
+-- 11. WEB PUSH AND SYRUPS (added live 2026-10-12, synced here 2026-11-13)
+--     Both tables have RLS on and NO policies at all: not even public
+--     reads. Only service-role API routes touch them.
+--     Not reproduced here (secrets): Vault entries daizu_vapid_private and
+--     daizu_alert_key, and the service-role-only daizu_vapid_private()
+--     function that reads the first.
+-- ---------------------------------------------------------------------
+
+alter table public.daizu_orders add column if not exists push_endpoint text;
+
+create table if not exists public.daizu_push (
+  id          bigint generated always as identity primary key,
+  endpoint    text        not null unique,
+  p256dh      text        not null,
+  auth        text        not null,
+  role        text        not null check (role in ('barista', 'customer')),
+  created_at  timestamptz not null default now()
+);
+alter table public.daizu_push enable row level security;
+
+create table if not exists public.daizu_syrup_batches (
+  syrup_id    text        primary key,
+  made_on     date        not null,
+  updated_at  timestamptz not null default now()
+);
+alter table public.daizu_syrup_batches enable row level security;
+
+
+-- ---------------------------------------------------------------------
+-- 12. "STILL WAITING" PINGS (2026-11-13)
+--     nudges = how many follow-up pings an unopened order has had (0, 1, 2).
+--     pg_cron `daizu-waiting` runs every minute but only calls the app
+--     when an order has sat "received" for 3 or 8 minutes.
+-- ---------------------------------------------------------------------
+
+alter table public.daizu_orders add column if not exists nudges integer not null default 0;
+
+-- pg_cron jobs (run once; cron.schedule replaces a job of the same name)
+-- select cron.schedule('daizu-syrups', '0 16 * * *', $job$
+--   select net.http_post(
+--     url := 'https://daizu-henna.vercel.app/api/notify',
+--     headers := jsonb_build_object('Content-Type', 'application/json',
+--       'x-daizu-key', (select decrypted_secret from vault.decrypted_secrets where name = 'daizu_alert_key')),
+--     body := '{"kind":"syrups"}'::jsonb, timeout_milliseconds := 20000);
+-- $job$);
+-- select cron.schedule('daizu-waiting', '* * * * *', $job$
+--   select net.http_post(
+--     url := 'https://daizu-henna.vercel.app/api/notify',
+--     headers := jsonb_build_object('Content-Type', 'application/json',
+--       'x-daizu-key', (select decrypted_secret from vault.decrypted_secrets where name = 'daizu_alert_key')),
+--     body := '{"kind":"waiting"}'::jsonb, timeout_milliseconds := 20000)
+--   where exists (
+--     select 1 from public.daizu_orders
+--     where status = 'received'
+--       and created_at > now() - interval '30 minutes'
+--       and ((nudges = 0 and created_at <= now() - interval '3 minutes')
+--         or (nudges = 1 and created_at <= now() - interval '8 minutes')));
+-- $job$);
+
 -- =====================================================================
