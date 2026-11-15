@@ -16,6 +16,7 @@ import {
   type Shot,
 } from '@/lib/beans';
 import { useBeans } from './useBeans';
+import { NextBagCard } from './NextBag';
 import { Btn, Card, Label, Note, P, Pill, RecipeTiles, SERIF, mono } from './ui';
 
 const TASTE_DOT: Record<string, string> = { sour: '#A84438', balanced: '#7B9F8C', bitter: '#8A6D3B' };
@@ -39,7 +40,7 @@ export function BeansTab() {
     );
   }
 
-  const { hopper: bag, shots, bags, keyShots } = data;
+  const { hopper: bag, shots, bags, keyShots, roos } = data;
 
   if (!bag) {
     return (
@@ -49,6 +50,7 @@ export function BeansTab() {
           <p style={{ fontSize: '13px', opacity: 0.6, margin: '8px 0 0', fontStyle: 'italic', color: P.bg }}>add the one you&apos;re pulling from, then every shot lands on it</p>
         </div>
         <Btn onClick={() => router.push('/barista/bean')}>add the bag</Btn>
+        <NextBagCard roos={roos} hopper={null} bags={bags} doubles={null} shotsOnBag={0} />
       </div>
     );
   }
@@ -101,6 +103,8 @@ export function BeansTab() {
           {left > 0 ? `about ${doubles} double${doubles === 1 ? '' : 's'} left · ${left}g` : 'the bag should be empty'}
         </div>
       </Card>
+
+      <NextBagCard roos={roos} hopper={bag} bags={bags} doubles={doubles} shotsOnBag={shots.length} />
 
       {recipe && (
         <Card>

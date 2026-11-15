@@ -40,7 +40,12 @@ export default function BeanPage() {
       setGrams(String(editing.bag_grams));
       setNote(editing.note ?? '');
     } else {
-      setRoaster(data.bags[0]?.roaster ?? 'RoosRoast');
+      // From the next-bag card: ?name=&roaster=&roast=&grams= come from the RoosRoast email
+      const q = new URLSearchParams(window.location.search);
+      setRoaster(q.get('roaster') ?? data.bags[0]?.roaster ?? 'RoosRoast');
+      if (q.get('name')) setName(q.get('name')!);
+      if (q.get('roast')) setRoastDate(q.get('roast')!);
+      if (q.get('grams')) setGrams(q.get('grams')!);
     }
     setLoaded(true);
   }, [data, editId, loaded]);

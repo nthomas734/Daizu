@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { hopper, normShot, shotsFor } from '@/lib/beans-server';
+import { hopper, normShot, readRoos, shotsFor } from '@/lib/beans-server';
 import { homeDate, pastRecipes, type Bean, type NextStep } from '@/lib/beans';
 
 // GET — everything the beans tab needs in one call:
@@ -8,15 +8,17 @@ import { homeDate, pastRecipes, type Bean, type NextStep } from '@/lib/beans';
 //   shots    every shot on that bag, newest first
 //   bags     every bag, newest first (for "you've had this one before")
 //   keyShots balanced and recipe shots on every bag (usual range, history)
+//   roos     RoosRoast shipping news from Home (lib/supply.ts), or null
 export async function GET() {
   const sb = supabaseAdmin();
-  const [h, { data: bags }, { data: key }] = await Promise.all([
+  const [h, { data: bags }, { data: key }, roos] = await Promise.all([
     hopper(),
     sb.from('daizu_beans').select('*').order('created_at', { ascending: false }).limit(100),
     sb.from('daizu_shots').select('*').or('is_recipe.eq.true,taste.eq.balanced').order('pulled_at', { ascending: false }).limit(1000),
+    readRoos().catch(() => null),
   ]);
   const shots = h ? await shotsFor(h.id) : [];
-  return NextResponse.json({ hopper: h, shots, bags: bags ?? [], keyShots: (key ?? []).map(normShot) });
+  return NextResponse.json({ hopper: h, shots, bags: bags ?? [], keyShots: (key ?? []).map(normShot), roos });
 }
 
 const clean = (b: any) => ({

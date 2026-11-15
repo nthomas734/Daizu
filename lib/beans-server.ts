@@ -18,6 +18,7 @@ import {
   recipeOf,
   usualRange,
 } from '@/lib/beans';
+import { ROOS_KV, nextBag, nextBagLine, type RoosRecord } from '@/lib/supply';
 
 const num = (v: unknown) => (v == null || v === '' ? null : Number(v));
 
@@ -63,6 +64,12 @@ export async function keyShotsForName(name: string): Promise<Shot[]> {
     .or('is_recipe.eq.true,taste.eq.balanced')
     .order('pulled_at', { ascending: false });
   return (data ?? []).map(normShot);
+}
+
+/** RoosRoast shipping news, saved by Home into home_kv. Null when missing. */
+export async function readRoos(): Promise<RoosRecord | null> {
+  const { data } = await supabaseAdmin().from('home_kv').select('value').eq('key', ROOS_KV).maybeSingle();
+  return (data?.value as RoosRecord | undefined) ?? null;
 }
 
 export type ShotRow = Partial<Omit<Shot, 'id'>> & { bean_id: number };
@@ -116,7 +123,7 @@ export async function logShot(
   if (was > LOW_DOUBLES && now <= LOW_DOUBLES) {
     await sendToRole('barista', {
       title: '☕ beans',
-      body: `About ${now} doubles left of ${bean.name}.`,
+      body: `About ${now} doubles left of ${bean.name}. ${nextBagLine(nextBag(await readRoos().catch(() => null), bean))}`,
       url: '/barista?tab=beans',
       tag: `daizu-beans-${bean.id}`,
     });

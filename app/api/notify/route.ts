@@ -5,7 +5,8 @@
 //
 // body { kind: 'syrups' } — tell the bartender which syrups expire tomorrow
 //   or already have. Repeats daily until a new batch is logged or the syrup
-//   is 86'd in settings. Silent when everything's fresh.
+//   is 86'd in settings. Silent when everything's fresh. The same run tells
+//   him once when a new RoosRoast bag was delivered (beansArrived below).
 // body { kind: 'test', role } — ping every device with that role.
 // body { kind: 'waiting' } — from pg_cron `daizu-waiting` (every minute, and
 //   only when an order is actually waiting): an order still "received" gets
@@ -18,6 +19,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendToRole } from '@/lib/push-server';
 import { SYRUPS, syrupDaysLeft } from '@/lib/menu';
+import { hopper, readRoos } from '@/lib/beans-server';
+import { ROOS_ANNOUNCED_KV, bagName, fmtDay, nextBag } from '@/lib/supply';
 
 export const runtime = 'nodejs';
 
@@ -60,6 +63,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'unknown_kind' }, { status: 400 });
   }
 
+  const beans = await beansArrived().catch((e) => {
+    console.error('beans arrival check failed:', e);
+    return null;
+  });
+  return NextResponse.json({ ...(await syrupsJob()), beans });
+}
+
+/**
+ * Once per RoosRoast order: "new beans are here", the morning after Home sees
+ * the delivered email, until a bag is put in the hopper. Which order was
+ * announced is kept in home_kv `daizu_roos_announced`.
+ */
+async function beansArrived() {
+  const sb = supabaseAdmin();
+  const [roos, h, { data: bags }, { data: said }] = await Promise.all([
+    readRoos(),
+    hopper(),
+    sb.from('daizu_beans').select('name').order('created_at', { ascending: false }).limit(50),
+    sb.from('home_kv').select('value').eq('key', ROOS_ANNOUNCED_KV).maybeSingle(),
+  ]);
+  const nb = nextBag(roos, h);
+  if (nb.stage !== 'delivered' || !nb.orderNumber || said?.value === nb.orderNumber) return { sent: 0, stage: nb.stage };
+  const name = bagName(nb.item, bags ?? []) || 'The new bag';
+  const sent = await sendToRole('barista', {
+    title: '☕ new beans are here',
+    body: `${name}, shipped ${fmtDay(nb.shipOn)}. Add the bag when you open it.`,
+    url: '/barista?tab=beans',
+    tag: 'daizu-beans-arrived',
+  });
+  await sb.from('home_kv').upsert({ key: ROOS_ANNOUNCED_KV, value: nb.orderNumber, updated_at: new Date().toISOString() });
+  return { sent, order: nb.orderNumber };
+}
+
+async function syrupsJob() {
   const sb = supabaseAdmin();
   const [{ data: batches }, { data: oos }] = await Promise.all([
     sb.from('daizu_syrup_batches').select('syrup_id, made_on'),
@@ -81,7 +118,7 @@ export async function POST(req: NextRequest) {
     else if (left === 1) tomorrow.push(syrup.label);
   }
   if (expired.length === 0 && tomorrow.length === 0) {
-    return NextResponse.json({ sent: 0, today });
+    return { sent: 0, today };
   }
   if (expired.length) {
     await sb.from('daizu_out_of_stock').upsert(
@@ -109,7 +146,7 @@ export async function POST(req: NextRequest) {
     url: '/barista?tab=more',
     tag: 'daizu-syrups',
   });
-  return NextResponse.json({ sent, expired: gone, tomorrow, today });
+  return { sent, expired: gone, tomorrow, today };
 }
 
 const NUDGE_AT_MIN = [3, 8];
