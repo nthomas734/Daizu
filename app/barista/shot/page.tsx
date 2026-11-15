@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   adviseDialIn,
   adviseEveryday,
+  beanKey,
   dayOff,
   fmtGrind,
   parseNext,
@@ -75,7 +76,7 @@ export default function LogShotPage() {
 
   const input = { grind, dose_g: dose, yield_g: yieldG, seconds, pressure_seconds: pressure, after_eco: afterEco, taste };
   const range = useMemo(
-    () => usualRange((data?.keyShots ?? []).filter((s) => data?.bags.find((b) => b.id === s.bean_id)?.name.toLowerCase() === bag?.name.toLowerCase())),
+    () => usualRange((data?.keyShots ?? []).filter((s) => beanKey(data?.bags.find((b) => b.id === s.bean_id)?.name ?? '') === beanKey(bag?.name ?? ''))),
     [data, bag]
   );
   const preview: Advice | null =

@@ -10,6 +10,7 @@ import {
   Shot,
   adviseDialIn,
   adviseEveryday,
+  beanKey,
   dayOff,
   doublesLeft,
   fmtG,
@@ -51,8 +52,9 @@ export async function shotsFor(beanId: number): Promise<Shot[]> {
 /** Balanced and recipe shots on every bag with this bean's name. */
 export async function keyShotsForName(name: string): Promise<Shot[]> {
   const sb = supabaseAdmin();
-  const { data: bags } = await sb.from('daizu_beans').select('id').ilike('name', name.trim());
-  const ids = (bags ?? []).map((b) => b.id);
+  const key = beanKey(name);
+  const { data: bags } = await sb.from('daizu_beans').select('id, name');
+  const ids = (bags ?? []).filter((b) => beanKey(b.name) === key).map((b) => b.id);
   if (ids.length === 0) return [];
   const { data } = await sb
     .from('daizu_shots')

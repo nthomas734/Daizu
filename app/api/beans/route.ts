@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
   // A bean he's had before starts from what the last bag settled on
   const [{ data: bags }, { data: key }] = await Promise.all([
-    sb.from('daizu_beans').select('*').ilike('name', body.name),
+    sb.from('daizu_beans').select('*'),
     sb.from('daizu_shots').select('*').eq('is_recipe', true).order('pulled_at', { ascending: false }),
   ]);
   const past = pastRecipes(body.name, (bags ?? []) as Bean[], (key ?? []).map(normShot));

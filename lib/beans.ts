@@ -247,16 +247,17 @@ export function adviseDialIn(s: ShotInput, prev: Shot[], range: [number, number]
 
   // Time in his usual range: keep the grind, move the yield
   const y = s.yield_g ?? 40;
+  const ratio = s.yield_g != null && s.dose_g ? (s.yield_g / s.dose_g).toFixed(1) : null;
   if (s.taste === 'sour') {
     const to = y + 2;
     return {
-      text: `Time looks normal but it is sharp. Keep the grind and pull longer: ${fmtG(to)}g out.`,
+      text: `Time looks normal but it is sharp${ratio ? `, and 1:${ratio} is a short pull` : ''}. Keep the grind and pull longer: ${fmtG(to)}g out. More water through the same puck pulls out more sweetness.`,
       next: { ...same(s, `Same grind, pull to ${fmtG(to)}g out.`), yield: to },
     };
   }
   const to = y - 3;
   return {
-    text: `Time looks normal but it is harsh. Keep the grind and stop sooner: ${fmtG(to)}g out.`,
+    text: `Time looks normal but it is harsh. Keep the grind and stop sooner: ${fmtG(to)}g out. The last grams carry most of the bitterness.`,
     next: { ...same(s, `Same grind, stop at ${fmtG(to)}g out.`), yield: to },
   };
 }
@@ -403,12 +404,20 @@ export function afterGapPattern(shots: Shot[]): string | null {
 
 export type PastRecipe = { bean: Bean; recipe: Shot; day: number | null };
 
+/**
+ * Two bags are the same bean when their names match once case, emoji and
+ * punctuation are set aside: "Lobster Butter 🦞 🧈" is "lobster butter".
+ */
+export function beanKey(name: string): string {
+  return name.normalize('NFKD').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().toLowerCase();
+}
+
 /** What earlier bags of this bean settled on, newest first. */
 export function pastRecipes(name: string, bags: Bean[], keyShots: Shot[], exceptBeanId?: number): PastRecipe[] {
-  const key = name.trim().toLowerCase();
+  const key = beanKey(name);
   if (!key) return [];
   return bags
-    .filter((b) => b.name.trim().toLowerCase() === key && b.id !== exceptBeanId)
+    .filter((b) => beanKey(b.name) === key && b.id !== exceptBeanId)
     .map((bean) => {
       const recipe = keyShots.find((s) => s.bean_id === bean.id && s.is_recipe);
       return recipe ? { bean, recipe, day: dayOff(bean, recipe.pulled_at) } : null;
