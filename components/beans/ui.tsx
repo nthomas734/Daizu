@@ -43,20 +43,30 @@ export function Pill({ children, tone = 'sage' }: { children: ReactNode; tone?: 
   return <span style={{ ...mono({ fontWeight: 600, letterSpacing: '0.1em' }), ...c, padding: '4px 10px', borderRadius: '20px', display: 'inline-block' }}>{children}</span>;
 }
 
-/** grind · in · out · sec, as four dark tiles */
-export function RecipeTiles({ grind, dose, yieldG, seconds }: { grind?: number | null; dose?: number | null; yieldG?: number | null; seconds?: number | null }) {
-  const tiles: [string, string][] = [
-    [fmtGrind(grind), 'grind'],
-    [fmtG(dose), 'g in'],
-    [fmtG(yieldG), 'g out'],
-    [seconds != null ? String(seconds) : '–', 'sec'],
+/**
+ * grind · in · out · sec, as four dark tiles. With `lastSeconds` instead of
+ * `seconds` (a next shot, not pulled yet) the time tile shows the last
+ * shot's time, faded and labelled "last sec": a reference, never a target.
+ */
+export function RecipeTiles({ grind, dose, yieldG, seconds, lastSeconds }: { grind?: number | null; dose?: number | null; yieldG?: number | null; seconds?: number | null; lastSeconds?: number | null }) {
+  const ghost = seconds == null && lastSeconds != null;
+  const tiles: [string, string, boolean][] = [
+    [fmtGrind(grind), 'grind', false],
+    [fmtG(dose), 'g in', false],
+    [fmtG(yieldG), 'g out', false],
+    ghost ? [String(lastSeconds), 'last sec', true] : [seconds != null ? String(seconds) : '–', 'sec', false],
   ];
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
-      {tiles.map(([v, l]) => (
-        <div key={l} style={{ background: P.bg, color: P.cream, borderRadius: '10px', padding: '10px 4px', textAlign: 'center' }}>
-          <b style={{ display: 'block', fontFamily: SERIF, fontWeight: 300, fontSize: '22px', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{v}</b>
-          <span style={mono({ fontSize: '9px', letterSpacing: '0.12em', color: P.brass, display: 'block', marginTop: '5px' })}>{l}</span>
+      {tiles.map(([v, l, faded]) => (
+        <div
+          key={l}
+          style={faded
+            ? { background: 'transparent', border: `1px dashed ${P.bg}33`, color: P.bg, borderRadius: '10px', padding: '9px 4px', textAlign: 'center' }
+            : { background: P.bg, color: P.cream, borderRadius: '10px', padding: '10px 4px', textAlign: 'center' }}
+        >
+          <b style={{ display: 'block', fontFamily: SERIF, fontWeight: 300, fontSize: '22px', lineHeight: 1, fontVariantNumeric: 'tabular-nums', opacity: faded ? 0.55 : 1 }}>{v}</b>
+          <span style={mono({ fontSize: '9px', letterSpacing: '0.12em', color: faded ? DARK_BRASS : P.brass, display: 'block', marginTop: '5px' })}>{l}</span>
         </div>
       ))}
     </div>

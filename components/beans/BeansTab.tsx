@@ -104,22 +104,26 @@ export function BeansTab() {
         </div>
       </Card>
 
-      <NextBagCard roos={roos} hopper={bag} bags={bags} doubles={doubles} shotsOnBag={shots.length} />
+      {!recipe && !next && <Btn onClick={() => router.push('/barista/shot')}>log a shot</Btn>}
 
       {recipe && (
         <Card>
           <Label>this bag&apos;s recipe{dayOff(bag, recipe.pulled_at) != null ? ` · day ${dayOff(bag, recipe.pulled_at)}` : ''}</Label>
           <RecipeTiles grind={recipe.grind} dose={recipe.dose_g} yieldG={recipe.yield_g} seconds={recipe.seconds} />
+          {!next && <Btn style={{ marginTop: '12px' }} onClick={() => router.push('/barista/shot')}>log a shot</Btn>}
         </Card>
       )}
 
       {next && (
         <Card>
           <Label>next shot · carried over</Label>
-          <RecipeTiles grind={next.grind} dose={next.dose} yieldG={next.yield} seconds={null} />
+          <RecipeTiles grind={next.grind} dose={next.dose} yieldG={next.yield} seconds={null} lastSeconds={shots[0]?.seconds ?? null} />
           <div style={{ color: `${P.bg}99`, marginTop: '8px', fontSize: '13px' }}>{next.text}</div>
+          <Btn style={{ marginTop: '12px' }} onClick={() => router.push('/barista/shot')}>log this shot</Btn>
         </Card>
       )}
+
+      <NextBagCard roos={roos} hopper={bag} bags={bags} doubles={doubles} shotsOnBag={shots.length} />
 
       {past.length > 0 && (
         <Note tone="note">
@@ -158,10 +162,7 @@ export function BeansTab() {
         </Card>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-        <Btn line onClick={() => router.push('/barista/bean')}>new bag</Btn>
-        <Btn onClick={() => router.push('/barista/shot')}>log a shot</Btn>
-      </div>
+      <Btn line onClick={() => router.push('/barista/bean')}>new bag</Btn>
     </div>
   );
 }
