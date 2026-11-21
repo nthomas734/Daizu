@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/Logo';
 import { SwipeRow } from '@/components/SwipeRow';
@@ -460,6 +460,14 @@ function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent]           = useState(false);
 
+  // On a phone the panel opens under the grid, below the fold: bring it up
+  // so "send to queue" clears the tab bar without a scroll
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!selected || isTablet) return;
+    requestAnimationFrame(() => panelRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+  }, [selected, isTablet]);
+
   const items = menuMode === 'bar' ? BAR_ITEMS : CAFE_ITEMS;
   const isHighball = selected?.name === 'HOUSE HIGHBALL';
   const isMilkDrink = selected ? MILK_DRINKS.includes(selected.name) : false;
@@ -527,7 +535,7 @@ function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
   };
 
   const orderPanel = selected && !sent && (
-    <div style={{ background: '#fff', border: `0.5px solid ${palette.bg}11`, borderRadius: '14px', padding: '16px', ...(isTablet ? {} : { marginTop: '12px' }) }}>
+    <div ref={panelRef} style={{ background: '#fff', border: `0.5px solid ${palette.bg}11`, borderRadius: '14px', padding: '16px', scrollMarginBottom: '104px', scrollMarginTop: '72px', ...(isTablet ? {} : { marginTop: '12px' }) }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
         <div>
           <p style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', margin: 0, color: palette.bg, fontWeight: 300 }}>{selected.display}</p>

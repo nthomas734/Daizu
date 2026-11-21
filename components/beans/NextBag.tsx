@@ -45,6 +45,9 @@ export function NextBagCard({ roos, hopper, bags, doubles, shotsOnBag }: {
     : nb.stage === 'out' ? <>{item} is out for delivery today</>
     : <>{item} arrived {nb.deliveredOn === today ? 'today' : fmtDay(nb.deliveredOn!)}</>;
 
+  // Home only reads the RoosRoast emails while it's open; say when it last did
+  const checkedAgo = roos?.checkedAt ? daysFrom(homeDate(roos.checkedAt), today) : null;
+
   // Will the hopper last until it lands?
   let supply: { text: string; short: boolean } | null = null;
   if (nb.stage !== 'delivered' && hopper && doubles != null) {
@@ -81,6 +84,7 @@ export function NextBagCard({ roos, hopper, bags, doubles, shotsOnBag }: {
           })}
         </div>
         {supply && <div style={{ color: supply.short ? P.accent : `${P.bg}99`, marginTop: '8px', fontSize: '13px' }}>{supply.text}</div>}
+        {checkedAgo != null && checkedAgo > 2 && <div style={{ color: `${P.bg}77`, marginTop: '8px', fontSize: '12px' }}>RoosRoast emails checked {checkedAgo} days ago</div>}
         {!roos && <div style={{ color: `${P.bg}77`, marginTop: '8px', fontSize: '12px' }}>from the every-two-weeks schedule; Home hasn&apos;t passed on any RoosRoast emails yet</div>}
       </Card>
       {nb.stage === 'delivered' && <Btn onClick={add}>add it · roasted {fmtDay(nb.shipOn).toLowerCase()}</Btn>}

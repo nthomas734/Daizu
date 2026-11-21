@@ -80,7 +80,7 @@ export type ShotRow = Partial<Omit<Shot, 'id'>> & { bean_id: number };
  */
 export async function logShot(
   row: ShotRow,
-  opts: { fromOrder?: boolean; inMilk?: boolean } = {}
+  opts: { fromOrder?: boolean; inMilk?: boolean; sameAsLast?: boolean } = {}
 ): Promise<{ shot: Shot; advice: Advice | null } | null> {
   const sb = supabaseAdmin();
   const { data: beanRow } = await sb.from('daizu_beans').select('*').eq('id', row.bean_id).maybeSingle();
@@ -101,9 +101,13 @@ export async function logShot(
     await sb.from('daizu_shots').update({ is_recipe: false }).eq('bean_id', bean.id).neq('id', shot.id).eq('is_recipe', true);
   }
 
+  // "Pulled one, same as last": a count, not a taste. No advice, and the
+  // open next shot carries on untouched.
   const recipe = recipeOf(after);
   let advice: Advice | null;
-  if (shot.is_recipe) {
+  if (opts.sameAsLast) {
+    advice = null;
+  } else if (shot.is_recipe) {
     advice = { text: `Saved as this bag's recipe: ${fmtGrind(shot.grind)}, ${fmtG(shot.dose_g)}g in${shot.yield_g != null ? `, ${fmtG(shot.yield_g)}g out` : ''}${shot.seconds != null ? `, ${shot.seconds}s` : ''}.`, next: null };
   } else if (shot.taste || !recipe) {
     const range = usualRange(await keyShotsForName(bean.name));
@@ -115,8 +119,10 @@ export async function logShot(
 
   // The open thread: set by advice that names a next shot, cleared once a
   // shot is logged without one (it ran as usual, or it was balanced)
-  const next = advice?.next ?? null;
-  await sb.from('daizu_beans').update({ next_step: next ? JSON.stringify(next) : null }).eq('id', bean.id);
+  if (!opts.sameAsLast) {
+    const next = advice?.next ?? null;
+    await sb.from('daizu_beans').update({ next_step: next ? JSON.stringify(next) : null }).eq('id', bean.id);
+  }
 
   const was = doublesLeft(bean, before);
   const now = doublesLeft(bean, after);

@@ -9,7 +9,8 @@ const TASTES = ['sour', 'balanced', 'bitter'];
 const BODIES = ['thin', 'right', 'heavy'];
 
 // POST — log a shot by hand (the beans tab, or "log the whole shot" from an
-// order). Returns the shot and the one-sentence advice.
+// order). Returns the shot and the one-sentence advice. same_as_last: true
+// logs a repeat of the last shot with no taste: no advice, next step kept.
 export async function POST(req: NextRequest) {
   const b = await req.json();
   const beanId = n(b.bean_id) ?? (await hopper())?.id;
@@ -32,12 +33,12 @@ export async function POST(req: NextRequest) {
       seconds: n(b.seconds),
       pressure_seconds: n(b.pressure_seconds),
       after_eco: !!b.after_eco,
-      taste: TASTES.includes(b.taste) ? b.taste : null,
+      taste: b.same_as_last !== true && TASTES.includes(b.taste) ? b.taste : null,
       body: BODIES.includes(b.body) ? b.body : null,
-      is_recipe: !!b.is_recipe,
+      is_recipe: b.same_as_last !== true && !!b.is_recipe,
       note: typeof b.note === 'string' && b.note.trim() ? b.note.trim() : null,
     },
-    { fromOrder: !!orderId }
+    { fromOrder: !!orderId, sameAsLast: !orderId && b.same_as_last === true }
   );
   if (!res) return NextResponse.json({ error: 'save_failed' }, { status: 500 });
   return NextResponse.json(res);

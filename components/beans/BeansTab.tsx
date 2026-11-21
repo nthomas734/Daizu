@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   beforeYouPull,
+  homeDate,
   dayOff,
   doublesLeft,
   fmtG,
@@ -17,6 +18,7 @@ import {
 } from '@/lib/beans';
 import { useBeans } from './useBeans';
 import { NextBagCard } from './NextBag';
+import { daysFrom } from '@/lib/supply';
 import { Btn, Card, Label, Note, P, Pill, RecipeTiles, SERIF, mono } from './ui';
 
 const TASTE_DOT: Record<string, string> = { sour: '#A84438', balanced: '#7B9F8C', bitter: '#8A6D3B' };
@@ -96,6 +98,46 @@ export function BeansTab() {
     setBusy(false);
   };
 
+  // "Pulled one, same as last": the last shot's numbers, no taste. The bag
+  // count keeps up; the advice and the carried-over next shot don't move.
+  const lastShot = shots[0] ?? null;
+  const sameAsLast = async () => {
+    if (busy || !lastShot) return;
+    setBusy(true);
+    try {
+      const r = await fetch('/api/shots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          same_as_last: true,
+          bean_id: bag.id,
+          grind: lastShot.grind,
+          dose_g: lastShot.dose_g,
+          beans_in_g: lastShot.beans_in_g,
+          yield_g: lastShot.yield_g,
+          seconds: lastShot.seconds,
+          pressure_seconds: lastShot.pressure_seconds,
+          after_eco: lastShot.after_eco,
+        }),
+      });
+      if (!r.ok) throw new Error(String(r.status));
+      reload();
+    } catch {
+      alert('Couldn’t log the shot. Check the connection and try again.');
+    }
+    setBusy(false);
+  };
+  const logButtons = (label: string, inCard: boolean) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: inCard ? '12px' : 0 }}>
+      <Btn onClick={() => router.push('/barista/shot')}>{label}</Btn>
+      {lastShot && <Btn line disabled={busy} onClick={sameAsLast}>pulled one, same as last</Btn>}
+    </div>
+  );
+
+  // Fewer shots logged than days since the bag was opened: the count is a floor
+  const daysOpen = bag.opened_on ? daysFrom(bag.opened_on, homeDate()) : 0;
+  const thinLog = shots.length > 0 && shots.length < daysOpen;
+
   const toggle = (id: number) => {
     setArmed(null);
     setOpen((o) => (o === id ? null : id));
@@ -124,16 +166,17 @@ export function BeansTab() {
         </div>
         <div style={{ color: `${P.bg}99`, marginTop: '4px', fontSize: '13px' }}>
           {left > 0 ? `about ${doubles} double${doubles === 1 ? '' : 's'} left · ${left}g` : 'the bag should be empty'}
+          {thinLog && <>, <b style={{ fontWeight: 600, color: P.bg }}>if these {shots.length} are every shot</b></>}
         </div>
       </Card>
 
-      {!recipe && !next && <Btn onClick={() => router.push('/barista/shot')}>log a shot</Btn>}
+      {!recipe && !next && logButtons('log a shot', false)}
 
       {recipe && (
         <Card>
           <Label>this bag&apos;s recipe{dayOff(bag, recipe.pulled_at) != null ? ` · day ${dayOff(bag, recipe.pulled_at)}` : ''}</Label>
           <RecipeTiles grind={recipe.grind} dose={recipe.dose_g} yieldG={recipe.yield_g} seconds={recipe.seconds} />
-          {!next && <Btn style={{ marginTop: '12px' }} onClick={() => router.push('/barista/shot')}>log a shot</Btn>}
+          {!next && logButtons('log a shot', true)}
         </Card>
       )}
 
@@ -142,7 +185,7 @@ export function BeansTab() {
           <Label>next shot · carried over</Label>
           <RecipeTiles grind={next.grind} dose={next.dose} yieldG={next.yield} seconds={null} lastSeconds={shots[0]?.seconds ?? null} />
           <div style={{ color: `${P.bg}99`, marginTop: '8px', fontSize: '13px' }}>{next.text}</div>
-          <Btn style={{ marginTop: '12px' }} onClick={() => router.push('/barista/shot')}>log this shot</Btn>
+          {logButtons('log this shot', true)}
         </Card>
       )}
 
