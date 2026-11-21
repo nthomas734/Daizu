@@ -30,6 +30,9 @@ export function BeansTab() {
   const router = useRouter();
   const { data, error, reload } = useBeans();
   const [armed, setArmed] = useState<number | null>(null);
+  // One shot row open at a time: make it the recipe, fix it, remove
+  const [open, setOpen] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
 
   if (!data) {
     return (
@@ -74,8 +77,28 @@ export function BeansTab() {
       return;
     }
     setArmed(null);
+    setOpen(null);
     await fetch(`/api/shots?id=${s.id}`, { method: 'DELETE' });
     reload();
+  };
+
+  const makeRecipe = async (s: Shot) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const r = await fetch('/api/shots', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: s.id, is_recipe: true }) });
+      if (!r.ok) throw new Error(String(r.status));
+      setOpen(null);
+      reload();
+    } catch {
+      alert('Couldn’t save the recipe. Check the connection and try again.');
+    }
+    setBusy(false);
+  };
+
+  const toggle = (id: number) => {
+    setArmed(null);
+    setOpen((o) => (o === id ? null : id));
   };
 
   return (
@@ -143,20 +166,43 @@ export function BeansTab() {
               : delta != null && Math.abs(delta) > 3
                 ? <span style={{ color: P.accent }}>{delta > 0 ? '+' : '−'}{Math.abs(delta)}s</span>
                 : <span style={{ opacity: 0.5 }}>{s.order_id ? 'order' : 'not tasted'}</span>;
+            const isOpen = open === s.id;
+            const last = i === Math.min(shots.length, 10) - 1;
+            const act = (tone: 'go' | 'line' | 'del') => ({
+              flex: 1, minHeight: '44px', borderRadius: '8px', cursor: 'pointer',
+              ...mono({ fontSize: '9px', letterSpacing: '0.12em', fontWeight: 600 }),
+              background: tone === 'go' ? P.bg : 'transparent',
+              color: tone === 'go' ? P.cream : tone === 'del' ? P.accent : P.bg,
+              border: `1px solid ${tone === 'go' ? P.bg : tone === 'del' ? `${P.accent}77` : `${P.bg}4D`}`,
+            });
             return (
-              <button
+              <div
                 key={s.id}
-                onClick={() => remove(s)}
-                style={{ all: 'unset', boxSizing: 'border-box', width: '100%', display: 'grid', gridTemplateColumns: '52px 1fr auto', gap: '10px', alignItems: 'center', padding: '10px 0', minHeight: '44px', borderBottom: i < Math.min(shots.length, 10) - 1 ? `1px solid ${P.bg}12` : 'none', fontSize: '13px', fontVariantNumeric: 'tabular-nums', cursor: 'pointer' }}
+                style={{
+                  margin: '0 -14px', padding: '0 14px',
+                  background: isOpen ? `${P.brass}24` : 'transparent',
+                  borderBottom: last ? 'none' : `1px solid ${P.bg}12`,
+                }}
               >
-                <span style={mono({ color: `${P.bg}88`, letterSpacing: '0.08em' })}>{d != null ? `day ${d}` : `shot ${shots.length - i}`}</span>
-                <span>
-                  {armed === s.id ? <b style={{ color: P.accent }}>tap again to remove</b> : (
-                    <>{fmtGrind(s.grind)} · {fmtG(s.dose_g)} → {fmtG(s.yield_g)}{s.seconds != null ? ` · ${s.seconds}s` : ''}{s.is_recipe ? ' · recipe' : ''}</>
-                  )}
-                </span>
-                {right}
-              </button>
+                <button
+                  onClick={() => toggle(s.id)}
+                  aria-expanded={isOpen}
+                  style={{ all: 'unset', boxSizing: 'border-box', width: '100%', display: 'grid', gridTemplateColumns: '52px 1fr auto', gap: '10px', alignItems: 'center', padding: '10px 0', minHeight: '44px', fontSize: '13px', fontVariantNumeric: 'tabular-nums', cursor: 'pointer' }}
+                >
+                  <span style={mono({ color: `${P.bg}88`, letterSpacing: '0.08em' })}>{d != null ? `day ${d}` : `shot ${shots.length - i}`}</span>
+                  <span>{fmtGrind(s.grind)} · {fmtG(s.dose_g)} → {fmtG(s.yield_g)}{s.seconds != null ? ` · ${s.seconds}s` : ''}{s.is_recipe ? ' · recipe' : ''}</span>
+                  {right}
+                </button>
+                {isOpen && (
+                  <div style={{ display: 'flex', gap: '6px', paddingBottom: '12px' }}>
+                    {s.taste === 'balanced' && !s.is_recipe && (
+                      <button style={act('go')} disabled={busy} onClick={() => makeRecipe(s)}>make it the recipe</button>
+                    )}
+                    <button style={act('line')} onClick={() => router.push(`/barista/shot?edit=${s.id}`)}>fix it</button>
+                    <button style={act('del')} onClick={() => remove(s)}>{armed === s.id ? 'tap again' : 'remove'}</button>
+                  </div>
+                )}
+              </div>
             );
           })}
         </Card>

@@ -32,10 +32,14 @@ export default function LogShotPage() {
   const { data } = useBeans();
   const [orderId, setOrderId] = useState<number | null>(null);
   const [secondsHint, setSecondsHint] = useState<number | null>(null);
+  // ?edit=ID: "fix it" from a shot row. The form opens with that shot and
+  // saves over it (PATCH): same pulled_at, no advice, no push.
+  const [editId, setEditId] = useState<number | null>(null);
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     if (q.get('order')) setOrderId(Number(q.get('order')));
     if (q.get('s')) setSecondsHint(Number(q.get('s')));
+    if (q.get('edit')) setEditId(Number(q.get('edit')));
   }, []);
 
   const [ready, setReady] = useState(false);
@@ -63,6 +67,22 @@ export default function LogShotPage() {
   // then the last shot, then the recipe
   useEffect(() => {
     if (!data || ready) return;
+    const editing = editId ? data.shots.find((x) => x.id === editId) : null;
+    if (editing) {
+      setGrind(editing.grind ?? 12);
+      setDose(editing.dose_g);
+      setYieldG(editing.yield_g ?? 40);
+      setSeconds(editing.seconds ?? 28);
+      setTaste(editing.taste);
+      setBody(editing.body);
+      setPressure(editing.pressure_seconds);
+      setAfterEco(editing.after_eco);
+      setBeansIn(editing.beans_in_g);
+      setNote(editing.note ?? '');
+      if (editing.pressure_seconds != null || editing.beans_in_g != null || editing.after_eco || editing.note) setMore(true);
+      setReady(true);
+      return;
+    }
     const next = parseNext(data.hopper?.next_step);
     const last = handLogged[0] ?? shots[0];
     const base = orderId && recipe ? recipe : null;
@@ -72,7 +92,7 @@ export default function LogShotPage() {
     setSeconds(secondsHint ?? base?.seconds ?? last?.seconds ?? recipe?.seconds ?? 28);
     setReady(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, orderId, secondsHint]);
+  }, [data, orderId, secondsHint, editId]);
 
   const input = { grind, dose_g: dose, yield_g: yieldG, seconds, pressure_seconds: pressure, after_eco: afterEco, taste };
   const range = useMemo(
@@ -80,11 +100,32 @@ export default function LogShotPage() {
     [data, bag]
   );
   const preview: Advice | null =
-    taste ? adviseDialIn(input, handLogged, range)
+    editId ? null
+    : taste ? adviseDialIn(input, handLogged, range)
     : recipe ? adviseEveryday(input, recipe, { day: bag ? dayOff(bag) : null })
     : null;
 
   const back = () => router.push(orderId ? `/barista/order/${orderId}` : '/barista?tab=beans');
+
+  const saveFix = async () => {
+    if (!editId || saving) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/shots', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editId, grind, dose_g: dose, yield_g: yieldG, seconds,
+          pressure_seconds: pressure, after_eco: afterEco, beans_in_g: beansIn, taste, body, note,
+        }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      back();
+    } catch {
+      alert('Couldn’t save the fix. Check the connection and try again.');
+      setSaving(false);
+    }
+  };
 
   const save = async (asRecipe: boolean) => {
     if (!bag || saving) return;
@@ -111,7 +152,7 @@ export default function LogShotPage() {
 
   const wrap = (children: React.ReactNode) => (
     <div style={{ minHeight: '100vh', background: P.cream, color: P.bg, fontFamily: SANS }}>
-      <TopBar back={orderId ? 'order' : 'beans'} onBack={back} title="log a shot" right={bag ? `shot ${shots.length + 1}` : ''} />
+      <TopBar back={orderId ? 'order' : 'beans'} onBack={back} title={editId ? 'fix a shot' : 'log a shot'} right={editId ? '' : bag ? `shot ${shots.length + 1}` : ''} />
       <div style={{ maxWidth: '480px', margin: '0 auto', padding: '16px', paddingBottom: 'calc(32px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {children}
       </div>
@@ -119,6 +160,9 @@ export default function LogShotPage() {
   );
 
   if (!data) return wrap(<p style={mono({ opacity: 0.6 })}>loading…</p>);
+  if (editId && !data.shots.some((x) => x.id === editId)) {
+    return wrap(<Note tone="note">That shot isn&apos;t on the bag in the hopper, so it can&apos;t be fixed here.</Note>);
+  }
   if (!bag) {
     return wrap(
       <>
@@ -146,7 +190,7 @@ export default function LogShotPage() {
   return wrap(
     <>
       <Card>
-        <Label>{orderId ? 'this order’s shot' : 'starts at the last shot'} · hold for 0.05</Label>
+        <Label>{editId ? 'as saved' : orderId ? 'this order’s shot' : 'starts at the last shot'} · hold for 0.05</Label>
         <Stepper id="grind" label="grind" value={grind} onChange={setGrind} step={0.25} fine={0.05} min={0} max={50} format={fmtGrind} />
         <Stepper id="dose" label="in the basket, g" value={dose} onChange={setDose} step={0.1} min={5} max={30} format={r1} />
         <Stepper id="yield" label="out, g" value={yieldG} onChange={setYieldG} step={1} fine={0.1} min={5} max={120} format={(v) => (Number.isInteger(v) ? String(v) : r1(v))} />
@@ -203,7 +247,9 @@ export default function LogShotPage() {
 
       {preview && <Note tone={preview.offerRecipe ? 'keep' : 'change'}>{preview.text}</Note>}
 
-      {taste === 'balanced' ? (
+      {editId ? (
+        <Btn disabled={saving} onClick={saveFix}>{saving ? 'saving…' : 'save the fix'}</Btn>
+      ) : taste === 'balanced' ? (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
           <Btn line disabled={saving} onClick={() => save(false)}>just save</Btn>
           <Btn disabled={saving} onClick={() => save(true)}>save as recipe</Btn>
