@@ -457,6 +457,7 @@ function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
   const [temp, setTemp]           = useState<'hot' | 'iced'>('hot');
   const [qty, setQty]             = useState(1);
   const [name, setName]           = useState('');
+  const [note, setNote]           = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent]           = useState(false);
 
@@ -487,8 +488,8 @@ function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
     setSubmitting(true);
 
     const payload = selected.cat === 'bar'
-      ? { category: 'bar', drink: selected.name, strength, quantity: qty, spirit: isHighball ? spirit : null, customer: name.trim() || 'bar', notes: '' }
-      : { category: 'cafe', drink: selected.name, temp, milk: isMilkDrink ? 'whole' : null, syrups: [], sweetness: 'normal', extras: [], customer: name.trim() || 'bar', notes: '' };
+      ? { category: 'bar', drink: selected.name, strength, quantity: qty, spirit: isHighball ? spirit : null, customer: name.trim() || 'bar', notes: note.trim() }
+      : { category: 'cafe', drink: selected.name, temp, milk: isMilkDrink ? 'whole' : null, syrups: [], sweetness: 'normal', extras: [], customer: name.trim() || 'bar', notes: note.trim() };
 
     const pushEndpoint = await currentEndpoint();
     const res = await fetch('/api/orders', {
@@ -506,6 +507,7 @@ function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
         setSelected(null);
         setQty(1);
         setName('');
+        setNote('');
       }, 1400);
     }
   };
@@ -611,6 +613,12 @@ function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
       <div style={{ marginBottom: '12px' }}>
         <p style={labelStyle}>name</p>
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="guest name" style={{ width: '100%', boxSizing: 'border-box', border: `0.5px solid ${palette.bg}22`, borderRadius: '8px', padding: '12px 10px', fontSize: '16px', background: '#fff', color: palette.bg, outline: 'none', fontFamily: "'Manrope', sans-serif" }} />
+      </div>
+
+      {/* one optional line: "oat" for a guest, "less ice". Shows on the queue card */}
+      <div style={{ marginBottom: '12px' }}>
+        <p style={labelStyle}>note</p>
+        <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder={selected.cat === 'bar' ? 'optional · less sweet, no garnish' : 'optional · oat, less ice'} maxLength={140} style={{ width: '100%', boxSizing: 'border-box', border: `0.5px solid ${palette.bg}22`, borderRadius: '8px', padding: '12px 10px', fontSize: '16px', background: '#fff', color: palette.bg, outline: 'none', fontFamily: "'Manrope', sans-serif" }} />
       </div>
 
       <button onClick={handleSubmit} disabled={submitting} style={{ width: '100%', padding: '13px', minHeight: '52px', background: palette.bg, color: palette.cream, border: 'none', borderRadius: '10px', fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.22em', textTransform: 'uppercase', cursor: submitting ? 'wait' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
