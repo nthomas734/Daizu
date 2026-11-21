@@ -9,6 +9,7 @@ import {
   COCKTAILS,
   COLORS,
   DRINKS,
+  EXTRAS,
   HIGHBALL_SPIRITS,
   MILK_DRINKS,
   MILKS,
@@ -664,6 +665,13 @@ function OrderBody({ palette, isTablet }: { palette: any; isTablet: boolean }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // QueueBody (unchanged)
 // ─────────────────────────────────────────────────────────────────────────────
+/** " · less sweet · extra shot": sweetness and extras when not the default. */
+function cafeExtras(order: Order): string {
+  const sweet = order.sweetness === 'light' ? 'less sweet' : order.sweetness === 'extra' ? 'extra sweet' : null;
+  const extras = (order.extras ?? []).map((e) => EXTRAS.find((x) => x.id === e)?.label ?? e.replace(/_/g, ' '));
+  return [sweet, ...extras].filter(Boolean).map((x) => ` · ${x}`).join('');
+}
+
 function QueueBody({ active, palette, onPick, onReady, onDelete, onClearAll }: {
   active: Order[]; palette: any; onPick: (id: number) => void; onReady: (id: number) => void; onDelete: (id: number) => void; onClearAll: () => void;
 }) {
@@ -715,9 +723,22 @@ function QueueBody({ active, palette, onPick, onReady, onDelete, onClearAll }: {
                     {order.category === 'bar' ? (
                       <>{order.strength || 'standard'}{order.spirit && ` · ${order.spirit}`}</>
                     ) : (
-                      <>{order.temp}{order.milk && ` · ${order.milk}`}{order.syrups?.length > 0 && ` · ${order.syrups.join(', ')}`}</>
+                      <>{order.temp}{order.milk && ` · ${order.milk}`}{order.syrups?.length > 0 && ` · ${order.syrups.join(', ')}`}{cafeExtras(order)}</>
                     )}
                   </p>
+                  {/* The note rides on the card: the ✓ and the swipe finish a
+                      drink without opening it, so the note has to be seen here */}
+                  {order.notes?.trim() && (
+                    <p style={{
+                      margin: '7px 0 0', padding: '5px 9px', borderRadius: '7px', background: `${palette.brass}33`,
+                      fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '13.5px', lineHeight: 1.35, color: palette.bg,
+                      display: 'inline-block', maxWidth: '100%', boxSizing: 'border-box',
+                    }}>
+                      <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', overflowWrap: 'anywhere' }}>
+                        &ldquo;{order.notes.trim()}&rdquo;
+                      </span>
+                    </p>
+                  )}
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}>
                   <span style={{
