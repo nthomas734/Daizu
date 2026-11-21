@@ -35,6 +35,8 @@ Auth is a single shared password behind a cookie gate, not Supabase Auth. There 
 
 `middleware.ts` runs on every request (matcher excludes only `_next/static`, `_next/image`, `favicon.ico`). It allow-lists `/auth`, `/api/auth`, `/manifest.json`, and `/icon-*` so the login page and PWA shell can load unauthenticated. Everything else requires the `daizu_auth` cookie to equal the literal constant `AUTH_COOKIE_VALUE` (`'admit_one'`); otherwise it redirects to `/auth?next=<original path>`. `POST /api/auth` compares the submitted password to `DAIZU_PASSWORD` and, on match, sets that httpOnly cookie with a one-year max-age. Cookie name/value/TTL constants live in `lib/auth.ts` and are shared by both middleware and the route — change them there, never inline.
 
+The dot opens `/barista` from the cafe menu and `/barista?from=bar` from the bar menu; the hub header then says "barista" or "bartender" and exit returns to that menu. The hub's bottom bar (queue · order · beans · more) has thin line icons (`TabIcon` in `app/barista/page.tsx`).
+
 Consequence: the barista hub at `/barista` is *not* separately protected. It is only "hidden" behind a 350ms long-press on a nearly invisible brass dot in the bottom-right of the menu screen (`BaristaDot` in `app/page.tsx`).
 
 ## Data flow

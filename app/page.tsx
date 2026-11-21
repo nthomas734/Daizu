@@ -374,7 +374,7 @@ export default function MenuPage() {
         >
           — for bean&apos;s favorite human —
         </p>
-        <BaristaDot onOpen={() => router.push('/barista')} palette={palette} />
+        <BaristaDot onOpen={() => router.push(mode === 'bar' ? '/barista?from=bar' : '/barista')} palette={palette} />
       </div>
     );
   }
@@ -450,7 +450,7 @@ export default function MenuPage() {
         — for bean&apos;s favorite human —
       </p>
 
-      <BaristaDot onOpen={() => router.push('/barista')} palette={palette} />
+      <BaristaDot onOpen={() => router.push(mode === 'bar' ? '/barista?from=bar' : '/barista')} palette={palette} />
     </div>
   );
 }

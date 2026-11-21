@@ -214,10 +214,16 @@ export default function BaristaHubPage() {
   const viewport = useViewport();
   const isTablet = viewport === 'tablet';
   const [tab, setTabState] = useState<Tab>('queue');
+  // Opened from the bar menu (?from=bar): the header says "bartender" and
+  // exit goes back to the bar menu. From the cafe menu it says "barista".
+  const [fromBar, setFromBar] = useState(false);
   // Keep the tab in the URL so "back" from a beans screen returns to it
   const setTab = (t: Tab) => {
     setTabState(t);
-    try { window.history.replaceState(null, '', t === 'queue' ? '/barista' : `/barista?tab=${t}`); } catch {}
+    const q = new URLSearchParams();
+    if (t !== 'queue') q.set('tab', t);
+    if (fromBar) q.set('from', 'bar');
+    try { window.history.replaceState(null, '', q.toString() ? `/barista?${q}` : '/barista'); } catch {}
     window.scrollTo(0, 0);
   };
   const [orders, setOrders] = useState<Order[]>([]);
@@ -227,7 +233,9 @@ export default function BaristaHubPage() {
   // Deep links: ?tab=beans (bean alerts, beans screens), ?tab=settings or
   // ?tab=more (the syrup reminder; settings now live under "more")
   useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get('tab');
+    const q = new URLSearchParams(window.location.search);
+    setFromBar(q.get('from') === 'bar');
+    const t = q.get('tab');
     if (t === 'beans' || t === 'order' || t === 'more') setTabState(t);
     else if (t === 'settings' || t === 'stats') setTabState('more');
   }, []);
@@ -336,11 +344,11 @@ export default function BaristaHubPage() {
               daizu
             </span>
             <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.25em', color: palette.brass, textTransform: 'uppercase' }}>
-              {tab === 'queue' ? 'bartender' : tab}
+              {tab === 'queue' ? (fromBar ? 'bartender' : 'barista') : tab}
             </span>
           </div>
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push(fromBar ? '/?mode=bar' : '/')}
             style={{ background: 'transparent', border: `1px solid ${palette.brass}66`, color: palette.brass, fontFamily: "'Geist Mono', monospace", fontSize: '10px', letterSpacing: '0.15em', padding: '0 12px', minHeight: '36px', borderRadius: '2px', textTransform: 'uppercase', cursor: 'pointer' }}
           >
             ← exit
@@ -379,24 +387,61 @@ export default function BaristaHubPage() {
                 aria-current={on ? 'page' : undefined}
                 style={{
                   minHeight: '56px', background: 'transparent', border: 'none', cursor: 'pointer',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px',
                   fontFamily: "'Geist Mono', monospace", fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase',
                   color: on ? palette.brass : `${palette.brass}88`, fontWeight: on ? 600 : 400,
                 }}
               >
-                <i style={{ width: '22px', height: '3px', borderRadius: '2px', background: on ? palette.brass : 'transparent' }} />
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {t.label}
+                <span style={{ position: 'relative', display: 'block', width: '22px', height: '22px' }}>
+                  <TabIcon id={t.id} />
                   {!!t.badge && (
-                    <span style={{ minWidth: '18px', padding: '1px 5px', borderRadius: '9px', background: palette.accent, color: '#fff', fontSize: '10px', letterSpacing: 0, fontWeight: 600 }}>{t.badge}</span>
+                    <span style={{ position: 'absolute', top: '-7px', left: '15px', minWidth: '18px', padding: '1px 5px', borderRadius: '9px', background: palette.accent, color: '#fff', fontSize: '10px', lineHeight: '14px', letterSpacing: 0, fontWeight: 600, textAlign: 'center' }}>{t.badge}</span>
                   )}
                 </span>
+                <span>{t.label}</span>
               </button>
             );
           })}
         </div>
       </nav>
     </div>
+  );
+}
+
+/** Thin brass line icons for the bottom bar (tab icon mockups, option A). */
+function TabIcon({ id }: { id: Tab }) {
+  const line = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style={{ display: 'block' }}>
+      {id === 'queue' && (
+        <g {...line}>
+          <path d="M3 4.5h18" />
+          <rect x="4.5" y="4.5" width="4.5" height="8" rx="0.8" />
+          <rect x="10.5" y="4.5" width="4.5" height="11" rx="0.8" />
+          <rect x="16.5" y="4.5" width="3" height="6" rx="0.8" />
+        </g>
+      )}
+      {id === 'order' && (
+        <g {...line}>
+          <path d="M4 9h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9z" />
+          <path d="M16 11h1.5a2.5 2.5 0 0 1 0 5H16" />
+          <path d="M10 3.5v4M8 5.5h4" />
+        </g>
+      )}
+      {id === 'beans' && (
+        <g {...line}>
+          <ellipse cx="12" cy="12" rx="6.5" ry="8.5" transform="rotate(-30 12 12)" />
+          <path d="M15.5 5.5c-3 2-1.5 5-3.5 6.5s-4.5 2-4.5 6" />
+        </g>
+      )}
+      {id === 'more' && (
+        <g fill="currentColor">
+          <circle cx="5.5" cy="12" r="1.6" />
+          <circle cx="12" cy="12" r="1.6" />
+          <circle cx="18.5" cy="12" r="1.6" />
+        </g>
+      )}
+    </svg>
   );
 }
 
