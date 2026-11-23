@@ -481,3 +481,44 @@ drop policy if exists public_read_shots on public.daizu_shots;
 create policy public_read_shots on public.daizu_shots for select using (true);
 
 -- =====================================================================
+
+
+-- ---------------------------------------------------------------------
+-- 14. ORDER AHEAD (2026-11-22)
+--     A cafe order for the morning waits as status 'scheduled'.
+--     want_at   = when she wants it ready (ready_at is when it WAS ready)
+--     seen_at   = when the bartender tapped "got it"
+--     on_at     = when he tapped "it's on" (the machine is warming)
+--     queued_at = when it joined the queue as 'received'; the "still
+--                 waiting" pings count from here, not from created_at
+--     ahead_sent = which order-ahead pings have gone out (seen2, on, on2)
+--     His morning settings live in home_kv key 'daizu_mornings'.
+-- ---------------------------------------------------------------------
+
+alter table public.daizu_orders
+  add column if not exists want_at    timestamptz,
+  add column if not exists seen_at    timestamptz,
+  add column if not exists on_at      timestamptz,
+  add column if not exists queued_at  timestamptz,
+  add column if not exists ahead_sent text[] not null default '{}';
+
+alter table public.daizu_orders drop constraint if exists orders_status_check;
+alter table public.daizu_orders add constraint orders_status_check
+  check (status = any (array['scheduled','received','brewing','ready','cancelled']));
+
+-- pg_cron `daizu-waiting` now also calls the app every minute while any
+-- order is 'scheduled' (replaces the job in section 12):
+-- select cron.schedule('daizu-waiting', '* * * * *', $job$
+--   select net.http_post(
+--     url := 'https://daizu-henna.vercel.app/api/notify',
+--     headers := jsonb_build_object('Content-Type', 'application/json',
+--       'x-daizu-key', (select decrypted_secret from vault.decrypted_secrets where name = 'daizu_alert_key')),
+--     body := '{"kind":"waiting"}'::jsonb, timeout_milliseconds := 20000)
+--   where exists (
+--     select 1 from public.daizu_orders
+--     where status = 'scheduled'
+--        or (status = 'received'
+--       and coalesce(queued_at, created_at) > now() - interval '30 minutes'
+--       and ((nudges = 0 and coalesce(queued_at, created_at) <= now() - interval '3 minutes')
+--         or (nudges = 1 and coalesce(queued_at, created_at) <= now() - interval '8 minutes'))));
+-- $job$);

@@ -12,7 +12,9 @@
 //   only when an order is actually waiting): an order still "received" gets
 //   a second bartender ping at 3 minutes and a third at 8, then nothing.
 //   `nudges` on the order makes each fire once. Same tag as the first push,
-//   so it replaces that notification rather than stacking.
+//   so it replaces that notification rather than stacking. The same run
+//   works through orders placed for the morning (aheadTick): ask again,
+//   machine on, start it. The cron job fires while any order is waiting.
 
 import { createHash } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
@@ -20,6 +22,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { sendToRole } from '@/lib/push-server';
 import { SYRUPS, syrupDaysLeft } from '@/lib/menu';
 import { hopper, readRoos } from '@/lib/beans-server';
+import { aheadTick } from '@/lib/ahead-server';
 import { ROOS_ANNOUNCED_KV, bagName, fmtDay, nextBag } from '@/lib/supply';
 
 export const runtime = 'nodejs';
@@ -56,7 +59,12 @@ export async function POST(req: NextRequest) {
   }
 
   if (body.kind === 'waiting') {
-    return NextResponse.json(await nudgeWaiting());
+    // Orders for the morning first: one may join the queue on this run
+    const ahead = await aheadTick().catch((e) => {
+      console.error('order-ahead tick failed:', e);
+      return null;
+    });
+    return NextResponse.json({ ...(await nudgeWaiting()), ahead });
   }
 
   if (body.kind !== 'syrups') {
@@ -156,14 +164,15 @@ async function nudgeWaiting() {
   const since = new Date(Date.now() - 30 * 60_000).toISOString();
   const { data: orders } = await sb
     .from('daizu_orders')
-    .select('id, customer, drink, category, quantity, push_endpoint, created_at, nudges')
+    .select('id, customer, drink, category, quantity, push_endpoint, created_at, queued_at, nudges')
     .eq('status', 'received')
     .lt('nudges', NUDGE_AT_MIN.length)
-    .gte('created_at', since);
+    // an order placed ahead counts from when it joined the queue
+    .or(`created_at.gte.${since},queued_at.gte.${since}`);
 
   let sent = 0;
   for (const o of orders ?? []) {
-    const ageMin = (Date.now() - new Date(o.created_at).getTime()) / 60_000;
+    const ageMin = (Date.now() - new Date(o.queued_at ?? o.created_at).getTime()) / 60_000;
     const due = NUDGE_AT_MIN.filter((m) => ageMin >= m).length;
     if (due <= o.nudges) continue;
     // Claim the nudge first; if another run got there, skip

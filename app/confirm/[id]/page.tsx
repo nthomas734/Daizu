@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { COLORS, Order, phraseLine } from '@/lib/menu';
 import { FlapRow } from '@/components/SplitFlap';
 import { enablePush, getPushStatus, type PushStatus } from '@/lib/push';
+import { AheadConfirm } from '@/components/AheadConfirm';
 
 export default function ConfirmPage({
   params,
@@ -69,7 +70,8 @@ export default function ConfirmPage({
   }, [id]);
 
   // 5-second cancel countdown — only available while order is "received"
-  const canCancel = order?.status === 'received' && secondsLeft > 0;
+  // (not for an order placed ahead: its changes were made while it waited)
+  const canCancel = order?.status === 'received' && !order.want_at && secondsLeft > 0;
   useEffect(() => {
     if (!canCancel) return;
     const t = setInterval(() => setSecondsLeft((s) => s - 1), 1000);
@@ -78,7 +80,7 @@ export default function ConfirmPage({
 
   // Show the "back to menu" flapboard once the cancel window closes
   useEffect(() => {
-    if (secondsLeft === 0 && order) setShowReturn(true);
+    if ((secondsLeft === 0 || order?.want_at) && order) setShowReturn(true);
   }, [secondsLeft, order]);
 
   const cancel = async () => {
@@ -129,6 +131,11 @@ export default function ConfirmPage({
         </p>
       </div>
     );
+  }
+
+  // Placed for the morning and still waiting (or he said he can't): its own screen
+  if (order.want_at && (order.status === 'scheduled' || order.status === 'cancelled')) {
+    return <AheadConfirm order={order} palette={palette} backUrl={backUrl} onOrder={setOrder} />;
   }
 
   const currentIdx = STATUSES.findIndex((s) => s.id === order.status);

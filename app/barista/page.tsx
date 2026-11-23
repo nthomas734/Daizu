@@ -22,6 +22,7 @@ import { timeAgo } from '@/lib/time';
 import { currentEndpoint, disablePush, enablePush, getPushStatus, type PushStatus } from '@/lib/push';
 import { useViewport } from '@/lib/useViewport';
 import { BeansTab } from '@/components/beans/BeansTab';
+import { AheadSection, MorningsCard } from '@/components/AheadCard';
 
 type Tab = 'queue' | 'order' | 'beans' | 'more';
 
@@ -286,8 +287,13 @@ export default function BaristaHubPage() {
 
   // Oldest first: whoever has waited longest is at the top
   const active = orders
-    .filter((o) => o.status !== 'ready' && o.status !== 'cancelled')
-    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+    .filter((o) => o.status !== 'ready' && o.status !== 'cancelled' && o.status !== 'scheduled')
+    .sort((a, b) => (a.queued_at ?? a.created_at).localeCompare(b.queued_at ?? b.created_at));
+  // Ordered for the morning, not yet time to make: their own section
+  const ahead = orders
+    .filter((o) => o.status === 'scheduled' && o.want_at)
+    .sort((a, b) => a.want_at!.localeCompare(b.want_at!));
+  const setOrder = (o: Order) => setOrders((prev) => prev.map((x) => (x.id === o.id ? o : x)));
 
   const deleteOrder = async (id: number) => {
     await fetch(`/api/orders/${id}`, { method: 'DELETE' });
@@ -327,7 +333,7 @@ export default function BaristaHubPage() {
   };
 
   const tabs: { id: Tab; label: string; badge?: number }[] = [
-    { id: 'queue', label: 'queue', badge: active.length },
+    { id: 'queue', label: 'queue', badge: active.length + ahead.filter((o) => !o.seen_at).length },
     { id: 'order', label: 'order' },
     { id: 'beans', label: 'beans' },
     { id: 'more', label: 'more' },
@@ -356,6 +362,7 @@ export default function BaristaHubPage() {
           </button>
         </div>
 
+        {tab === 'queue' && <AheadSection orders={ahead} palette={palette} onOrder={setOrder} />}
         {tab === 'queue' && (
           <QueueBody active={active} palette={palette} onPick={(id) => router.push(`/barista/order/${id}`)} onReady={readyOrder} onDelete={deleteOrder} onClearAll={clearAll} />
         )}
@@ -769,7 +776,7 @@ function QueueBody({ active, palette, onPick, onReady, onDelete, onClearAll }: {
                     {order.status === 'received' ? '● new' : (order.status === 'brewing' && order.category === 'bar' ? '● mixing' : order.status)}
                   </span>
                   <p style={{ margin: '5px 0 0', fontSize: '10px', color: palette.bg, opacity: 0.4, fontFamily: "'Geist Mono', monospace" }}>
-                    {timeAgo(order.created_at)}
+                    {timeAgo(order.queued_at ?? order.created_at)}
                   </p>
                 </div>
               </button>
@@ -870,6 +877,7 @@ function SettingsBody({ outOfStock, onToggle, batches, onLogBatch, palette }: {
           />
         ))}
       </Group>
+      <MorningsCard palette={palette} />
       <AlertsToggle palette={palette} />
     </div>
   );

@@ -1,5 +1,6 @@
 'use client';
 
+import { AheadStrip } from '@/components/AheadStrip';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/Logo';
@@ -359,6 +360,7 @@ export default function MenuPage() {
         }}
       >
         {header}
+      {mode === 'cafe' && <AheadStrip palette={palette} />}
         {board}
         <p
           style={{
@@ -399,6 +401,7 @@ export default function MenuPage() {
       }}
     >
       {header}
+      {mode === 'cafe' && <AheadStrip palette={palette} />}
 
       <div
         style={{

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendPushover } from '@/lib/pushover';
 import { sendToRole } from '@/lib/push-server';
+import { askPush, readMornings } from '@/lib/ahead-server';
 
 export const runtime = 'nodejs';
 
@@ -14,7 +15,8 @@ export async function GET() {
   const { data, error } = await sb
     .from('daizu_orders')
     .select('*')
-    .gte('created_at', dayAgo)
+    // An order waiting for the morning shows however long ago it was placed
+    .or(`created_at.gte.${dayAgo},status.eq.scheduled,queued_at.gte.${dayAgo}`)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -29,6 +31,11 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const sb = supabaseAdmin();
   const isCocktail = body.category === 'bar';
+
+  // Order ahead: a cafe drink for the morning waits as 'scheduled' until
+  // it's time to make it (lib/ahead.ts). Only a time still to come counts.
+  const wantMs = !isCocktail && typeof body.wantAt === 'string' ? Date.parse(body.wantAt) : NaN;
+  const ahead = Number.isFinite(wantMs) && wantMs > Date.now() + 10 * 60_000 && wantMs < Date.now() + 36 * 3_600_000;
 
   // Build a clean insert payload — only fields the schema knows about.
   // Coffee fields are NULL/empty for bar orders, and vice versa.
@@ -45,7 +52,8 @@ export async function POST(req: NextRequest) {
     quantity:  isCocktail ? (body.quantity || 1) : 1,
     spirit:    isCocktail ? (body.spirit ?? null) : null,
     notes:     body.notes || '',
-    status:    'received',
+    status:    ahead ? 'scheduled' : 'received',
+    want_at:   ahead ? new Date(wantMs).toISOString() : null,
     // The ordering device, if it's opted in to push — gets the "ready" ping
     push_endpoint: body.pushEndpoint || null,
   };
@@ -81,6 +89,14 @@ export async function POST(req: NextRequest) {
       notes: body.notes || '',
       customer: payload.customer,
     });
+  }
+
+  // For the morning: one ping saying when, and what it asks of him
+  if (ahead) {
+    const ask = askPush(data, await readMornings());
+    const reached = await sendToRole('barista', ask, payload.push_endpoint);
+    if (reached === 0) await sendPushover('barista', `${ask.title}\n${ask.body}`, { title: ask.title });
+    return NextResponse.json({ order: data });
   }
 
   // Build the notification body. Different shape per category.

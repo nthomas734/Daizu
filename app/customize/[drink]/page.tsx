@@ -18,6 +18,7 @@ import {
   SWEETNESS_LEVELS,
   SYRUPS,
 } from '@/lib/menu';
+import { AHEAD_ORDER_KEY, AHEAD_TIME_KEY, BARISTA_NAME, earliestWant, fmtClock, hhmmOf, homeTime, nextMorning, slots, type Morning, type Mornings } from '@/lib/ahead';
 
 export default function CustomizePage({
   params,
@@ -73,6 +74,21 @@ export default function CustomizePage({
   const [notes, setNotes] = useState('');
   const [saveAsFav, setSaveAsFav] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Order ahead (coffee only): now, or the next morning at a time she picks.
+  // His settings say whether he's taking them and what the earliest easy time is.
+  const [mornings, setMornings] = useState<Mornings | null>(null);
+  const [morning, setMorning] = useState<Morning | null>(null);
+  const [when, setWhen] = useState<'now' | 'morning'>('now');
+  const [wantAt, setWantAt] = useState<number | null>(null);
+  useEffect(() => {
+    if (isCocktail) return;
+    setMorning(nextMorning());
+    fetch('/api/mornings', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => { if (d.mornings) setMornings(d.mornings); })
+      .catch(() => {});
+  }, [isCocktail]);
 
   // Rotate notes placeholder
   const placeholders = isCocktail ? COCKTAIL_NOTE_PLACEHOLDERS : NOTE_PLACEHOLDERS;
@@ -135,8 +151,25 @@ export default function CustomizePage({
     setArr(arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]);
   };
 
+  const aheadOn = !isCocktail && !!mornings?.on && !!morning;
+  const choices = aheadOn ? slots(morning!, { drink: drinkName, temp }, mornings!) : [];
+  const easyFrom = aheadOn ? earliestWant(morning!, { drink: drinkName, temp }, mornings!) : 0;
+  const forMorning = aheadOn && when === 'morning' && wantAt != null;
+  const tooSoon = forMorning && wantAt! < Date.now() + 15 * 60_000;
+  const pickMorning = () => {
+    setWhen('morning');
+    if (wantAt != null || !morning) return;
+    // The time she picked last, else the first one that doesn't get him up early
+    let last: number | null = null;
+    try {
+      const saved = localStorage.getItem(AHEAD_TIME_KEY);
+      if (saved && /^\d\d:\d\d$/.test(saved)) last = homeTime(morning.ymd, saved);
+    } catch {}
+    setWantAt(last ?? choices.find((c) => !c.early)?.at ?? null);
+  };
+
   const handleSubmit = async () => {
-    if (!drink) return;
+    if (!drink || tooSoon) return;
     setSubmitting(true);
     const payload = isCocktail
       ? {
@@ -168,10 +201,17 @@ export default function CustomizePage({
     const res = await fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...payload, pushEndpoint }),
+      body: JSON.stringify({ ...payload, pushEndpoint, ...(forMorning ? { wantAt: new Date(wantAt!).toISOString() } : {}) }),
     });
     const data = await res.json();
     if (data.order) {
+      if (data.order.status === 'scheduled') {
+        // So the menu can lead back to it, and next time starts from this time
+        try {
+          localStorage.setItem(AHEAD_ORDER_KEY, String(data.order.id));
+          localStorage.setItem(AHEAD_TIME_KEY, hhmmOf(wantAt!));
+        } catch {}
+      }
       router.push(`/confirm/${data.order.id}${fromBar ? '?from=bar' : ''}`);
     } else {
       setSubmitting(false);
@@ -491,6 +531,47 @@ export default function CustomizePage({
         />
       </Section>
 
+      {aheadOn && (
+        <>
+          <Section label="when" palette={palette}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              <Pill active={when === 'now'} onClick={() => setWhen('now')} palette={palette}>now</Pill>
+              <Pill active={when === 'morning'} onClick={pickMorning} palette={palette}>{morning!.long.toLowerCase()} morning</Pill>
+            </div>
+          </Section>
+          {when === 'morning' && (
+            <Section label="ready at" palette={palette}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                {choices.map((c) => (
+                  <Pill key={c.at} active={wantAt === c.at} onClick={() => setWantAt(c.at)} palette={palette}>
+                    <span style={{ fontVariantNumeric: 'tabular-nums', opacity: c.early && wantAt !== c.at ? 0.55 : 1 }}>{fmtClock(c.at)}</span>
+                  </Pill>
+                ))}
+                <input
+                  type="time"
+                  aria-label="another time"
+                  value={wantAt != null ? hhmmOf(wantAt) : ''}
+                  onChange={(e) => { if (e.target.value) setWantAt(homeTime(morning!.ymd, e.target.value)); }}
+                  style={{
+                    background: wantAt != null && !choices.some((c) => c.at === wantAt) ? palette.cream : 'transparent',
+                    color: wantAt != null && !choices.some((c) => c.at === wantAt) ? palette.bg : palette.cream,
+                    border: `1px solid ${palette.brass}66`, borderRadius: '20px', padding: '7px 12px', minHeight: '36px',
+                    fontFamily: "'Manrope', sans-serif", fontSize: '13px', colorScheme: 'dark',
+                  }}
+                />
+              </div>
+              <p style={{ margin: '10px 0 0', fontFamily: "'Manrope', sans-serif", fontSize: '12px', fontStyle: 'italic', color: palette.cream, opacity: 0.65, lineHeight: 1.45 }}>
+                {tooSoon
+                  ? 'That time has nearly passed. Pick a later one, or order it now.'
+                  : wantAt != null && wantAt < easyFrom
+                    ? `Before ${fmtClock(easyFrom)} ${BARISTA_NAME} has to get up early. He'll say if he can.`
+                    : `${BARISTA_NAME} gets a ping now. Your screen says when he's seen it.`}
+              </p>
+            </Section>
+          )}
+        </>
+      )}
+
       <button
         onClick={() => setSaveAsFav(!saveAsFav)}
         style={{
@@ -531,7 +612,7 @@ export default function CustomizePage({
 
       <button
         onClick={handleSubmit}
-        disabled={submitting}
+        disabled={submitting || !!tooSoon}
         style={{
           position: 'fixed',
           // stay above the iPhone home indicator in the installed PWA
@@ -556,7 +637,7 @@ export default function CustomizePage({
           opacity: submitting ? 0.7 : 1,
         }}
       >
-        {submitting ? 'sending…' : 'send order →'}
+        {submitting ? 'sending…' : forMorning ? `order for ${morning!.weekday.toLowerCase()} ${fmtClock(wantAt!)} →` : 'send order →'}
       </button>
       </div>
     </div>

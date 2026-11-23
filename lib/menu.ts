@@ -127,7 +127,15 @@ export type Order = {
   sweetness: string;
   extras: string[];
   notes: string;
-  status: 'received' | 'brewing' | 'ready' | 'cancelled';
+  status: 'scheduled' | 'received' | 'brewing' | 'ready' | 'cancelled';
+  // Order ahead (lib/ahead.ts): when she wants it, when he saw it, when the
+  // machine went on, when it joined the queue, which pings have gone out
+  want_at?: string | null;
+  seen_at?: string | null;
+  on_at?: string | null;
+  queued_at?: string | null;
+  ahead_sent?: string[];
+  push_endpoint?: string | null;
   ready_phrase_jp?: string | null;
   ready_phrase_en?: string | null;
   created_at: string;
